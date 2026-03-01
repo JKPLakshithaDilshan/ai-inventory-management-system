@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
 
@@ -13,12 +13,7 @@ type ThemeProviderState = {
     setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
-    theme: "system",
-    setTheme: () => null,
-}
-
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined)
 
 export function ThemeProvider({
     children,
@@ -26,26 +21,58 @@ export function ThemeProvider({
     storageKey = "vite-ui-theme",
     ...props
 }: ThemeProviderProps) {
-    const [theme, setTheme] = useState<Theme>(
-        () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-    )
+    const isInitialMount = useRef(true)
+    const [theme, setTheme] = useState<Theme>(() => {
+        const storedTheme = localStorage.getItem(storageKey)
+        if (storedTheme === "light" || storedTheme === "dark" || storedTheme === "system") {
+            return storedTheme
+        }
+        return defaultTheme
+    })
 
     useEffect(() => {
         const root = window.document.documentElement
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+        let transitionTimeout: number | undefined
 
-        root.classList.remove("light", "dark")
+        const applyTheme = (activeTheme: Theme) => {
+            const resolvedTheme = activeTheme === "system"
+                ? (mediaQuery.matches ? "dark" : "light")
+                : activeTheme
 
-        if (theme === "system") {
-            const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-                .matches
-                ? "dark"
-                : "light"
+            if (!isInitialMount.current) {
+                root.classList.add("theme-changing")
+                transitionTimeout = window.setTimeout(() => {
+                    root.classList.remove("theme-changing")
+                }, 220)
+            }
 
-            root.classList.add(systemTheme)
-            return
+            root.classList.remove("light", "dark")
+            root.classList.add(resolvedTheme)
+            root.setAttribute("data-theme", resolvedTheme)
         }
 
-        root.classList.add(theme)
+        applyTheme(theme)
+        isInitialMount.current = false
+
+        if (theme !== "system") {
+            return () => {
+                if (transitionTimeout) {
+                    window.clearTimeout(transitionTimeout)
+                }
+                root.classList.remove("theme-changing")
+            }
+        }
+
+        const handleChange = () => applyTheme("system")
+        mediaQuery.addEventListener("change", handleChange)
+        return () => {
+            mediaQuery.removeEventListener("change", handleChange)
+            if (transitionTimeout) {
+                window.clearTimeout(transitionTimeout)
+            }
+            root.classList.remove("theme-changing")
+        }
     }, [theme])
 
     const value = {
