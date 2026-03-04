@@ -45,6 +45,7 @@ class SaleItemResponse(SaleItemBase):
 # Sale Schemas
 class SaleBase(BaseModel):
     """Base sale schema."""
+    warehouse_id: int
     sale_date: date
     customer_name: Optional[str] = None
     customer_email: Optional[EmailStr] = None

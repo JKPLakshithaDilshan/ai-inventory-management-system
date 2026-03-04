@@ -14,6 +14,9 @@ class PurchaseItemBase(BaseModel):
     product_id: int
     quantity: int = Field(gt=0)
     unit_price: float = Field(ge=0)
+    batch_number: Optional[str] = Field(None, max_length=100)
+    expiry_date: Optional[date] = None
+    manufacture_date: Optional[date] = None
     notes: Optional[str] = None
 
 
@@ -28,6 +31,9 @@ class PurchaseItemUpdate(BaseModel):
     quantity: Optional[int] = Field(None, gt=0)
     unit_price: Optional[float] = Field(None, ge=0)
     received_quantity: Optional[int] = Field(None, ge=0)
+    batch_number: Optional[str] = Field(None, max_length=100)
+    expiry_date: Optional[date] = None
+    manufacture_date: Optional[date] = None
     notes: Optional[str] = None
 
 
@@ -47,6 +53,7 @@ class PurchaseItemResponse(PurchaseItemBase):
 class PurchaseBase(BaseModel):
     """Base purchase schema."""
     supplier_id: int
+    warehouse_id: int
     purchase_date: date
     expected_delivery_date: Optional[date] = None
     tax_amount: float = Field(ge=0, default=0.0)

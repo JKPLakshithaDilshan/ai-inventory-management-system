@@ -6,9 +6,11 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.purchase import Purchase, PurchaseItem, PurchaseStatus
+from app.models.stock_ledger import StockTransactionType
 from app.schemas.purchase import PurchaseCreate, PurchaseUpdate
 from app.services.base_service import BaseService
 from app.services.product_service import ProductService
+from app.services.stock_ledger_service import StockLedgerService
 
 
 class PurchaseService(BaseService[Purchase, PurchaseCreate, PurchaseUpdate]):
@@ -17,6 +19,7 @@ class PurchaseService(BaseService[Purchase, PurchaseCreate, PurchaseUpdate]):
     def __init__(self, db: AsyncSession):
         super().__init__(Purchase, db)
         self.product_service = ProductService(db)
+        self.stock_ledger_service = StockLedgerService()
     
     async def generate_purchase_number(self) -> str:
         """Generate unique purchase number."""
@@ -112,7 +115,7 @@ class PurchaseService(BaseService[Purchase, PurchaseCreate, PurchaseUpdate]):
         if not purchase:
             return None
         
-        # Update received quantities and stock
+        # Update received quantities and stock using stock ledger
         for item_data in items:
             item_id = item_data.get('purchase_item_id')
             received_qty = item_data.get('received_quantity', 0)
@@ -123,13 +126,21 @@ class PurchaseService(BaseService[Purchase, PurchaseCreate, PurchaseUpdate]):
                 None
             )
             
-            if purchase_item:
+            if purchase_item and received_qty > 0:
                 purchase_item.received_quantity = received_qty
                 
-                # Update product stock
-                await self.product_service.update_stock(
-                    purchase_item.product_id,
-                    received_qty
+                # Update product stock via stock ledger (IN transaction)
+                await self.stock_ledger_service.apply_stock_change(
+                    db=self.db,
+                    product_id=purchase_item.product_id,
+                    warehouse_id=purchase.warehouse_id,
+                    qty_delta=received_qty,
+                    transaction_type=StockTransactionType.IN,
+                    reference_type="purchase",
+                    reference_id=purchase.id,
+                    note=f"Received PO {purchase.purchase_number}",
+                    actor_id=purchase.user_id,
+                    allow_negative=False
                 )
         
         # Update purchase status
