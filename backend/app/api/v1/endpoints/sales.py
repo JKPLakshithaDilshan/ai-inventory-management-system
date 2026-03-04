@@ -86,6 +86,33 @@ async def get_sale(
     return sale
 
 
+@router.post("/{sale_id}/complete", response_model=SaleResponse)
+async def complete_sale(
+    sale_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Complete a DRAFT sale and deduct stock.
+    
+    This finalizes the sale by:
+    - Validating stock availability
+    - Creating stock ledger entries
+    - Deducting stock from warehouse
+    - Setting status to COMPLETED
+    """
+    sale_service = SaleService(db)
+    
+    try:
+        sale = await sale_service.complete_sale(sale_id, current_user.id)
+        return sale
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
 @router.put("/{sale_id}", response_model=SaleResponse)
 async def update_sale(
     sale_id: int,
