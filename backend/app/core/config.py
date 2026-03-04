@@ -1,9 +1,18 @@
 """Application configuration management."""
 
+import os
+import logging
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Dict, Optional
-from pydantic import PostgresDsn, field_validator
+from pydantic import PostgresDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+# Get the base directory (backend/)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = BASE_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -19,7 +28,57 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "Production-ready inventory management system with AI forecasting"
     
     # CORS Settings
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:3000",
+        "http://localhost:5000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://localhost:5178",
+        "http://localhost:5179",
+        "http://localhost:5180",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+        "http://127.0.0.1:5176",
+        "http://127.0.0.1:5177",
+        "http://127.0.0.1:5178",
+        "http://127.0.0.1:5179",
+        "http://127.0.0.1:5180",
+    ]
+    
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        """Parse CORS origins from various formats.
+        
+        Supports:
+        1. JSON array string: '["http://localhost:5173","http://localhost:3000"]'
+        2. Comma-separated string: 'http://localhost:5173,http://localhost:3000'
+        3. Python list: ["http://localhost:5173", "http://localhost:3000"]
+        """
+        if isinstance(v, list):
+            return v
+        
+        if isinstance(v, str):
+            # Try parsing as JSON first
+            if v.startswith('['):
+                import json
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse CORS origins as JSON: {v}")
+            
+            # Fall back to comma-separated
+            return [origin.strip() for origin in v.split(',') if origin.strip()]
+        
+        return v
     
     # Security Settings
     SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -28,10 +87,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # Database Settings
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "inventory_db"
+    POSTGRES_SERVER: str = "localhost"  # Safe default
+    POSTGRES_USER: str  # Required - must be in .env
+    POSTGRES_PASSWORD: str  # Required - must be in .env
+    POSTGRES_DB: str  # Required - must be in .env
     POSTGRES_PORT: int = 5432
     DATABASE_URI: Optional[PostgresDsn] = None
     
@@ -51,6 +110,22 @@ class Settings(BaseSettings):
             port=values.get("POSTGRES_PORT"),
             path=f"{values.get('POSTGRES_DB') or ''}",
         )
+    
+    @model_validator(mode="after")
+    def validate_critical_settings(self) -> "Settings":
+        """Validate that critical database settings are properly configured."""
+        # Check for default/weak passwords in production
+        if self.ENVIRONMENT == "production":
+            if self.SECRET_KEY == "your-secret-key-change-in-production":
+                raise ValueError("SECRET_KEY must be changed in production!")
+            if self.POSTGRES_PASSWORD == "postgres":
+                raise ValueError("POSTGRES_PASSWORD must be changed from default!")
+        
+        # Log warning for weak passwords in development
+        if self.POSTGRES_PASSWORD in ["postgres", "password", "admin", ""]:
+            logger.warning(f" Using weak database password in {self.ENVIRONMENT} mode")
+        
+        return self
     
     # Redis Settings (for caching and background tasks)
     REDIS_HOST: str = "localhost"
@@ -86,10 +161,11 @@ class Settings(BaseSettings):
     FORECAST_DAYS: int = 30
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="allow"
+        extra="allow",
+        env_prefix=""
     )
 
 
@@ -99,8 +175,32 @@ def get_settings() -> Settings:
     
     Returns:
         Settings: Application settings object
+        
+    Raises:
+        ValueError: If required settings are missing or invalid
     """
-    return Settings()
+    # Log .env file loading status with absolute path
+    abs_env_path = str(ENV_FILE.resolve())
+    if ENV_FILE.exists():
+        logger.info(f"✓ Loading .env from: {abs_env_path}")
+    else:
+        logger.warning(f"⚠ .env file not found at: {abs_env_path}")
+        logger.warning("Using environment variables or defaults")
+    
+    try:
+        settings_obj = Settings()
+        logger.info(f" Configuration loaded successfully (Environment: {settings_obj.ENVIRONMENT})")
+        
+        # Log database connection details (masked password)
+        import re
+        masked_url = re.sub(r'://([^:]+):([^@]+)@', r'://\1:****@', str(settings_obj.DATABASE_URI))
+        logger.info(f"Database: postgresql+asyncpg://{settings_obj.POSTGRES_USER}:****@{settings_obj.POSTGRES_SERVER}:{settings_obj.POSTGRES_PORT}/{settings_obj.POSTGRES_DB}")
+        logger.info(f"SQLAlchemy URI (masked): {masked_url}")
+        
+        return settings_obj
+    except Exception as e:
+        logger.error(f" Failed to load configuration: {e}")
+        raise
 
 
 settings = get_settings()

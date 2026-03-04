@@ -1,5 +1,6 @@
 """Main FastAPI application."""
 
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,13 @@ from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.api.v1.router import api_router
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,19 +29,22 @@ async def lifespan(app: FastAPI):
     Handles database initialization on startup and cleanup on shutdown.
     """
     # Startup
-    print("🚀 Starting up...")
+    logger.info("🚀 Application startup initiated")
+    logger.info(f"Environment: {settings.ENVIRONMENT}")
+    logger.info(f"Debug Mode: {settings.DEBUG}")
     
     # Initialize database (for development only - use Alembic in production)
     if settings.DEBUG:
         await init_db()
-        print("✅ Database initialized")
+    
+    logger.info("✅ Application startup complete")
     
     yield
     
     # Shutdown
-    print("🛑 Shutting down...")
+    logger.info("🛑 Application shutdown initiated")
     await close_db()
-    print("✅ Database connections closed")
+    logger.info("✅ Application shutdown complete")
 
 
 # Create FastAPI application
@@ -48,13 +59,14 @@ app = FastAPI(
 )
 
 
-# CORS Middleware
+# CORS Middleware - Allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins in development
+    allow_credentials=False,  # Must be False when using wildcard
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
