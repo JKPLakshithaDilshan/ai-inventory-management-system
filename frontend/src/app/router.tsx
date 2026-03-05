@@ -19,11 +19,13 @@ const CreateSalePage = lazy(() => import('@/features/sales/CreateSalePage').then
 
 const AlertsPage = lazy(() => import('@/features/alerts/AlertsPage').then(m => ({ default: m.AlertsPage })));
 const AIForecastPage = lazy(() => import('@/features/ai/AIForecastPage').then(m => ({ default: m.AIForecastPage })));
-const AuditLogsPage = lazy(() => import('@/features/audit/AuditLogsPage').then(m => ({ default: m.default })));
+const AIReorderPage = lazy(() => import('@/features/ai/AIReorderPage').then(m => ({ default: m.AIReorderPage })));
+const AuditLogsPage = lazy(() => import('@/features/audit/AuditLogsPage').then(m => ({ default: m.default || m })));
 const UnauthorizedPage = lazy(() => import('@/features/auth/UnauthorizedPage').then(m => ({ default: m.UnauthorizedPage })));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
-const UsersPage = lazy(() => import('@/features/dummy-pages').then(m => ({ default: m.UsersPage })));
+const UsersPage = lazy(() => import('@/features/users/UsersPage').then(m => ({ default: m.UsersPage })));
+const DebugAuthPage = lazy(() => import('@/features/debug/DebugAuthPage').then(m => ({ default: m.DebugAuthPage })));
 
 // Fallback skeleton loader while routes load
 const PageLoader = () => (
@@ -36,6 +38,8 @@ export function AppRouter() {
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>
+                <Route path="/debug-auth" element={<DebugAuthPage />} />
+
                 {/* Auth Routes */}
                 <Route element={<RequireGuest />}>
                     <Route element={<AuthLayout />}>
@@ -67,6 +71,10 @@ export function AppRouter() {
 
                         <Route element={<RequirePermission permission={PERMISSIONS.AI_FORECAST_VIEW} />}>
                             <Route path="/ai/forecast" element={<AIForecastPage />} />
+                        </Route>
+
+                        <Route element={<RequirePermission permission={PERMISSIONS.AI_REORDER_VIEW} />}>
+                            <Route path="/ai/reorder" element={<AIReorderPage />} />
                         </Route>
 
                         <Route element={<RequirePermission permission={PERMISSIONS.ADMIN_AUDIT_VIEW} />}>

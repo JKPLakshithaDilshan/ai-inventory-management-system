@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 /**
  * Guard Component: Requires user to be authenticated
  * Redirects to /auth/login if not authenticated
+ * Note: Token verification is handled by bootstrap() in App.tsx
  */
 export function RequireAuth() {
     const { isAuthenticated } = useAuthStore();

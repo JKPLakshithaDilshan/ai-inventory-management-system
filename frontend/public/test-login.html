@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test</title>
+</head>
+<body>
+    <h1>Direct Backend Test</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <div id="result"></div>
+    
+    <script>
+    async function testLogin() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = 'Testing...';
+        
+        try {
+            console.log('Sending request to:', 'http://localhost:8000/api/v1/auth/login');
+            
+            const params = new URLSearchParams();
+            params.append('username', 'admin');
+            params.append('password', 'admin123');
+            
+            const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                mode: 'cors',
+                body: params.toString()
+            });
+            
+            console.log('Response status:', response.status);
+            console.log('Response headers:', [...response.headers.entries()]);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Success!', data);
+                resultDiv.innerHTML = '<div style="color:green">✅ SUCCESS! Token: ' + data.access_token.substring(0, 20) + '...</div>';
+            } else {
+                const error = await response.text();
+                console.error('Error:', error);
+                resultDiv.innerHTML = '<div style="color:red">❌ ERROR: ' + error + '</div>';
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            resultDiv.innerHTML = '<div style="color:red">❌ FETCH ERROR: ' + error.message + '</div>';
+        }
+    }
+    </script>
+</body>
+</html>
