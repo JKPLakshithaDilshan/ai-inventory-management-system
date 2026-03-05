@@ -44,8 +44,8 @@ export default function AuditLogsPage() {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedModule, setSelectedModule] = useState<string>('');
-    const [selectedAction, setSelectedAction] = useState<string>('');
+    const [selectedModule, setSelectedModule] = useState<string>('all');
+    const [selectedAction, setSelectedAction] = useState<string>('all');
     const [selectedDateRange, setSelectedDateRange] = useState<'today' | '7days' | '30days' | 'all'>('7days');
 
     // Fetch logs
@@ -64,8 +64,8 @@ export default function AuditLogsPage() {
     useEffect(() => {
         const filtered = filterLogs(logs, {
             search: searchQuery,
-            module: selectedModule || undefined,
-            action: selectedAction || undefined,
+            module: selectedModule === 'all' ? undefined : selectedModule,
+            action: selectedAction === 'all' ? undefined : selectedAction,
             dateRange: selectedDateRange,
         });
         setFilteredLogs(filtered);
@@ -73,8 +73,8 @@ export default function AuditLogsPage() {
 
     const handleClearFilters = () => {
         setSearchQuery('');
-        setSelectedModule('');
-        setSelectedAction('');
+        setSelectedModule('all');
+        setSelectedAction('all');
         setSelectedDateRange('7days');
     };
 
@@ -116,7 +116,7 @@ export default function AuditLogsPage() {
                                     <SelectValue placeholder="All Modules" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">All Modules</SelectItem>
+                                    <SelectItem value="all">All Modules</SelectItem>
                                     {modules.map(module => (
                                         <SelectItem key={module} value={module}>
                                             {module}
@@ -130,7 +130,7 @@ export default function AuditLogsPage() {
                                     <SelectValue placeholder="All Actions" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">All Actions</SelectItem>
+                                    <SelectItem value="all">All Actions</SelectItem>
                                     {actions.map(action => (
                                         <SelectItem key={action} value={action}>
                                             {action}
