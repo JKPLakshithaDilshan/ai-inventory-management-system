@@ -13,6 +13,7 @@ export interface PurchaseItem {
 
 export interface PurchaseDraft {
     supplierId: string;
+    warehouseId: string;
     referenceNo: string;
     purchaseDate: string;
     notes: string;
@@ -32,6 +33,7 @@ interface PurchaseStore {
 
 const defaultDraft: PurchaseDraft = {
     supplierId: '',
+    warehouseId: '1',
     referenceNo: '',
     purchaseDate: new Date().toISOString().split('T')[0],
     notes: '',

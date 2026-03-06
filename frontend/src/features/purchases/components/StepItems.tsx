@@ -1,35 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePurchaseStore } from '@/stores/usePurchaseStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Trash2 } from 'lucide-react';
-
-const mockProducts = [
-    { id: 'prod_1', sku: 'CH-001', name: 'Ergonomic Chair', cost: 120 },
-    { id: 'prod_2', sku: 'LT-012', name: 'MacBook Pro M3', cost: 1500 },
-    { id: 'prod_3', sku: 'MS-099', name: 'Wireless Mouse', cost: 25 },
-];
+import { getProducts, type Product } from '@/services/products';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function StepItems() {
     const { draft, setStep, updateItem, removeItem, addItem } = usePurchaseStore();
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleAddProduct = (product: typeof mockProducts[0]) => {
+    useEffect(() => {
+        loadProducts();
+    }, []);
+
+    const loadProducts = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const data = await getProducts(0, 1000);
+            setProducts(data.items);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load products');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddProduct = (product: Product) => {
         // Simple duplicate check
-        if (draft.items.find(i => i.productId === product.id)) {
+        if (draft.items.find(i => i.productId === product.id.toString())) {
             alert('Item already added.');
             return;
         }
         addItem({
             id: crypto.randomUUID(), // transient ID for the row
-            productId: product.id,
+            productId: product.id.toString(),
             sku: product.sku,
             name: product.name,
             qty: 1,
-            unitCost: product.cost,
-            lineTotal: product.cost,
+            unitCost: product.cost_price || 0,
+            lineTotal: product.cost_price || 0,
         });
         setIsAddOpen(false);
     };
@@ -63,17 +79,40 @@ export function StepItems() {
                                 Pick a product from the catalog to add to the purchase order.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-2 border rounded-md p-2 mt-4 max-h-[300px] overflow-y-auto">
-                            {mockProducts.map((p) => (
-                                <div key={p.id} className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer transition-colors" onClick={() => handleAddProduct(p)}>
-                                    <div>
-                                        <div className="font-medium">{p.name}</div>
-                                        <div className="text-xs text-muted-foreground">{p.sku}</div>
-                                    </div>
-                                    <div className="text-sm border py-1 px-3 rounded-full">Add</div>
-                                </div>
-                            ))}
-                        </div>
+                        {error ? (
+                            <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
+                                <p className="font-medium">{error}</p>
+                                <Button variant="outline" size="sm" onClick={loadProducts} className="mt-2">
+                                    Retry
+                                </Button>
+                            </div>
+                        ) : loading ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : (
+                            <div className="grid gap-2 border rounded-md p-2 mt-4 max-h-[300px] overflow-y-auto">
+                                {products.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-8">No products available</div>
+                                ) : (
+                                    products.map((p) => (
+                                        <div
+                                            key={p.id}
+                                            className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer transition-colors"
+                                            onClick={() => handleAddProduct(p)}
+                                        >
+                                            <div>
+                                                <div className="font-medium">{p.name}</div>
+                                                <div className="text-xs text-muted-foreground">{p.sku}</div>
+                                            </div>
+                                            <div className="text-sm border py-1 px-3 rounded-full">Add</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </DialogContent>
                 </Dialog>
             </div>

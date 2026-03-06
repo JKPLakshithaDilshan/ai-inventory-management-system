@@ -5,27 +5,66 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { createPurchase, type PurchaseCreateInput } from '@/services/purchases';
 
 export function StepReview() {
     const { draft, setStep, clearDraft } = usePurchaseStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
     const { toast } = useToast();
 
     const subtotal = draft.items.reduce((sum, item) => sum + item.lineTotal, 0);
 
-    const handleConfirm = () => {
-        setIsSubmitting(true);
-        // Simulate API call
-        setTimeout(() => {
-            setIsSubmitting(false);
+    const handleConfirm = async () => {
+        if (!draft.supplierId || !draft.warehouseId) {
+            setError('Missing supplier or warehouse');
+            return;
+        }
+
+        if (draft.items.length === 0) {
+            setError('No items in purchase order');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            setError(null);
+
+            const purchaseData: PurchaseCreateInput = {
+                supplier_id: parseInt(draft.supplierId),
+                warehouse_id: parseInt(draft.warehouseId),
+                purchase_date: draft.purchaseDate,
+                reference_number: draft.referenceNo || undefined,
+                notes: draft.notes || undefined,
+                tax_amount: 0,
+                discount_amount: 0,
+                items: draft.items.map((item) => ({
+                    product_id: parseInt(item.productId),
+                    quantity: item.qty,
+                    unit_price: item.unitCost,
+                })),
+            };
+
+            const result = await createPurchase(purchaseData);
+
             clearDraft();
             toast({
-                title: 'Purchase Order Created',
-                description: `Successfully created PO for ${draft.items.length} items.`,
+                title: 'Success',
+                description: `Purchase Order ${result.purchase_number} created successfully.`,
             });
-            navigate('/purchases');
-        }, 1000);
+            navigate(`/purchases/${result.id}`);
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Failed to create purchase';
+            setError(errorMsg);
+            toast({
+                title: 'Error',
+                description: errorMsg,
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleSaveDraft = () => {
@@ -39,6 +78,12 @@ export function StepReview() {
 
     return (
         <div className="space-y-6">
+            {error && (
+                <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
+                    <p className="font-medium">{error}</p>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                     <CardHeader className="pb-3">
@@ -48,6 +93,10 @@ export function StepReview() {
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Supplier ID:</span>
                             <span className="font-medium">{draft.supplierId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Warehouse ID:</span>
+                            <span className="font-medium">{draft.warehouseId}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Date:</span>
