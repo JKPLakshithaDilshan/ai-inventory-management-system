@@ -11,7 +11,8 @@ const LoginPage = lazy(() => import('@/features/dummy-pages').then(m => ({ defau
 const DashboardPage = lazy(() => import('@/features/dummy-pages').then(m => ({ default: m.DashboardPage })));
 const ProductsPage = lazy(() => import('@/features/products/ProductsPage').then(m => ({ default: m.ProductsPage })));
 const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
-const PurchasesPage = lazy(() => import('@/features/purchases/PurchasesPage').then(m => ({ default: m.PurchasesPage })));
+const PurchasesListPage = lazy(() => import('@/features/purchases/PurchasesListPage').then(m => ({ default: m.PurchasesPage })));
+const PurchaseDetailsPage = lazy(() => import('@/features/purchases/PurchaseDetailsPage').then(m => ({ default: m.PurchaseDetailsPage })));
 const PurchaseWizard = lazy(() => import('@/features/purchases/PurchaseWizard').then(m => ({ default: m.PurchaseWizard })));
 
 const SalesPage = lazy(() => import('@/features/sales/SalesPage').then(m => ({ default: m.SalesPage })));
@@ -57,8 +58,9 @@ export function AppRouter() {
                         <Route path="/products" element={<ProductsPage />} />
                         <Route path="/suppliers" element={<SuppliersPage />} />
                         <Route path="/purchases">
-                            <Route index element={<PurchasesPage />} />
+                            <Route index element={<PurchasesListPage />} />
                             <Route path="new" element={<PurchaseWizard />} />
+                            <Route path=":id" element={<PurchaseDetailsPage />} />
                         </Route>
                         <Route path="/sales">
                             <Route index element={<SalesPage />} />
