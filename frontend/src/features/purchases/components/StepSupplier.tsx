@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getSuppliers, type Supplier } from '@/services/suppliers';
+import { warehouseApi, type Warehouse } from '@/services/warehouses';
 
 const stepSupplierSchema = z.object({
     supplierId: z.string().min(1, { message: 'Please select a supplier.' }),
@@ -23,6 +24,7 @@ type StepSupplierValues = z.infer<typeof stepSupplierSchema>;
 export function StepSupplier() {
     const { draft, updateDraftMeta, setStep } = usePurchaseStore();
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -34,8 +36,28 @@ export function StepSupplier() {
         try {
             setLoading(true);
             setError(null);
-            const data = await getSuppliers(0, 1000, undefined, true);
-            setSuppliers(data.items);
+            const [supplierData, warehouseData] = await Promise.all([
+                getSuppliers(0, 100, undefined, true),
+                warehouseApi.list({ skip: 0, limit: 100 }).catch(() => ({
+                    items: [] as Warehouse[],
+                    total: 0,
+                    page: 1,
+                    page_size: 100,
+                    total_pages: 1,
+                })),
+            ]);
+
+            setSuppliers(supplierData.items);
+
+            const resolvedWarehouses = warehouseData.items.length > 0
+                ? warehouseData.items
+                : [{ id: 1, code: 'WH-MAIN', name: 'Main Warehouse', is_active: true, created_at: '', updated_at: '' } as Warehouse];
+
+            setWarehouses(resolvedWarehouses);
+
+            if (!draft.warehouseId && resolvedWarehouses.length > 0) {
+                updateDraftMeta({ warehouseId: String(resolvedWarehouses[0].id) });
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load suppliers');
         } finally {
@@ -121,7 +143,11 @@ export function StepSupplier() {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="1">Main Warehouse</SelectItem>
+                                        {warehouses.map((warehouse) => (
+                                            <SelectItem key={warehouse.id} value={String(warehouse.id)}>
+                                                {warehouse.name} ({warehouse.code})
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

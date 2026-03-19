@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Trash2 } from 'lucide-react';
 import { getProducts, type Product } from '@/services/products';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export function StepItems() {
     const { draft, setStep, updateItem, removeItem, addItem } = usePurchaseStore();
+    const { toast } = useToast();
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ export function StepItems() {
         try {
             setLoading(true);
             setError(null);
-            const data = await getProducts(0, 1000);
+            const data = await getProducts(0, 100);
             setProducts(data.items);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load products');
@@ -33,9 +35,12 @@ export function StepItems() {
     };
 
     const handleAddProduct = (product: Product) => {
-        // Simple duplicate check
         if (draft.items.find(i => i.productId === product.id.toString())) {
-            alert('Item already added.');
+            toast({
+                title: 'Already added',
+                description: 'This product is already in the purchase list.',
+                variant: 'destructive',
+            });
             return;
         }
         addItem({
@@ -52,11 +57,19 @@ export function StepItems() {
 
     const handleNext = () => {
         if (draft.items.length === 0) {
-            alert('Please add at least one item.');
+            toast({
+                title: 'Validation error',
+                description: 'Please add at least one item.',
+                variant: 'destructive',
+            });
             return;
         }
         if (draft.items.some(i => i.qty <= 0)) {
-            alert('All quantities must be greater than 0.');
+            toast({
+                title: 'Validation error',
+                description: 'All quantities must be greater than 0.',
+                variant: 'destructive',
+            });
             return;
         }
         setStep(3);

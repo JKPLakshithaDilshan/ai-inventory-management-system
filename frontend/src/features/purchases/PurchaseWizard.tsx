@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { usePurchaseStore } from '@/stores/usePurchaseStore';
@@ -7,6 +8,7 @@ import { StepSupplier } from './components/StepSupplier';
 
 import { StepItems } from './components/StepItems';
 import { StepReview } from './components/StepReview';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 const STEPS = [
     { id: 1, name: 'Supplier Details' },
@@ -17,12 +19,11 @@ const STEPS = [
 export function PurchaseWizard() {
     const navigate = useNavigate();
     const { step } = usePurchaseStore();
+    const [cancelOpen, setCancelOpen] = useState(false);
 
     const handleCancel = () => {
-        if (confirm('Are you sure you want to cancel? All unsaved progress will be lost.')) {
-            usePurchaseStore.getState().clearDraft();
-            navigate('/purchases');
-        }
+        usePurchaseStore.getState().clearDraft();
+        navigate('/purchases');
     };
 
     return (
@@ -35,7 +36,7 @@ export function PurchaseWizard() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" onClick={handleCancel}>
+                    <Button variant="ghost" onClick={() => setCancelOpen(true)}>
                         Cancel
                     </Button>
                 </div>
@@ -100,6 +101,15 @@ export function PurchaseWizard() {
                     {step === 3 && <StepReview />}
                 </CardContent>
             </Card>
+
+            <ConfirmDialog
+                open={cancelOpen}
+                onOpenChange={setCancelOpen}
+                title="Cancel purchase creation"
+                description="Are you sure you want to cancel? Unsaved progress will be lost."
+                confirmLabel="Yes, cancel"
+                onConfirm={handleCancel}
+            />
         </div>
     );
 }

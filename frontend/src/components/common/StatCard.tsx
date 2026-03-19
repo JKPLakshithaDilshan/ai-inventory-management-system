@@ -18,15 +18,15 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
     const isPositiveTrend = trend && trend.value >= 0;
 
     return (
-        <Card className={cn('hover:shadow-md transition-shadow', className)}>
+        <Card className={cn('min-w-0 hover:shadow-md transition-shadow', className)}>
             <CardContent className="p-6">
-                <div className="flex items-center justify-between space-x-4">
-                    <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
+                <div className="flex items-start gap-4">
+                    <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-sm font-medium leading-5 text-muted-foreground break-words">
                             {title}
                         </p>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-2xl font-bold tracking-tight">
+                        <div className="flex items-baseline gap-2 min-w-0">
+                            <p className="text-2xl font-bold tracking-tight leading-none break-words">
                                 {value}
                             </p>
                             {trend && (
@@ -43,13 +43,13 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
                             )}
                         </div>
                         {(description || trend?.label) && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs leading-5 text-muted-foreground break-words">
                                 {trend?.label || description}
                             </p>
                         )}
                     </div>
                     {Icon && (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                        <div className="shrink-0 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                             <Icon className="h-6 w-6 text-primary" />
                         </div>
                     )}

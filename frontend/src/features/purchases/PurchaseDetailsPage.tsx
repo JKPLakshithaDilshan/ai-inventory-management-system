@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getPurchaseById, receivePurchase, type Purchase, type ReceiveItemInput } from '@/services/purchases';
-import { ArrowLeft, Check } from 'lucide-react';
+import { getPurchaseById, markPending, receivePurchase, type Purchase, type ReceiveItemInput } from '@/services/purchases';
+import { ArrowLeft, Check, Clock } from 'lucide-react';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 export function PurchaseDetailsPage() {
@@ -20,11 +20,13 @@ export function PurchaseDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+    const [isMarkPendingDialogOpen, setIsMarkPendingDialogOpen] = useState(false);
     const [isReceiving, setIsReceiving] = useState(false);
+    const [isMarkingPending, setIsMarkingPending] = useState(false);
 
     useEffect(() => {
         if (!user) {
-            navigate('/login');
+            navigate('/auth/login');
             return;
         }
         loadPurchase();
@@ -78,7 +80,7 @@ export function PurchaseDetailsPage() {
             });
 
             setIsReceiveDialogOpen(false);
-            loadPurchase(); // Reload to show updated status
+            loadPurchase();
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Failed to receive purchase';
             toast({
@@ -88,6 +90,31 @@ export function PurchaseDetailsPage() {
             });
         } finally {
             setIsReceiving(false);
+        }
+    };
+
+    const handleMarkPending = async () => {
+        if (!purchase || purchase.status !== 'draft') {
+            return;
+        }
+
+        try {
+            setIsMarkingPending(true);
+            await markPending(purchase.id);
+            toast({
+                title: 'Purchase updated',
+                description: 'Purchase marked as pending.',
+            });
+            setIsMarkPendingDialogOpen(false);
+            await loadPurchase();
+        } catch (err) {
+            toast({
+                title: 'Error',
+                description: err instanceof Error ? err.message : 'Failed to mark purchase pending',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsMarkingPending(false);
         }
     };
 
@@ -129,7 +156,8 @@ export function PurchaseDetailsPage() {
         );
     }
 
-    const canReceive = purchase.status === 'draft' || purchase.status === 'ordered';
+    const canMarkPending = purchase.status === 'draft';
+    const canReceive = purchase.status === 'pending' || purchase.status === 'approved';
 
     return (
         <div className="flex flex-col gap-6">
@@ -153,7 +181,8 @@ export function PurchaseDetailsPage() {
                         variant={
                             {
                                 draft: 'secondary',
-                                ordered: 'outline',
+                                pending: 'outline',
+                                approved: 'outline',
                                 received: 'default',
                                 cancelled: 'destructive',
                             }[purchase.status] as any
@@ -161,6 +190,11 @@ export function PurchaseDetailsPage() {
                     >
                         {purchase.status.toUpperCase()}
                     </Badge>
+                    {canMarkPending && (
+                        <Button variant="outline" onClick={() => setIsMarkPendingDialogOpen(true)}>
+                            <Clock className="mr-2 h-4 w-4" /> Mark Pending
+                        </Button>
+                    )}
                     {canReceive && (
                         <Button onClick={() => setIsReceiveDialogOpen(true)}>
                             <Check className="mr-2 h-4 w-4" /> Receive Stock
@@ -299,41 +333,25 @@ export function PurchaseDetailsPage() {
                 </Card>
             )}
 
-            {/* Receive Confirmation Dialog */}
-            <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Receive Purchase Order</DialogTitle>
-                        <DialogDescription>
-                            This will mark all items as received and update inventory stock levels. This action is irreversible.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="rounded-lg bg-warning/10 p-4 text-sm text-amber-800">
-                            <p className="font-medium mb-2">Items to be received:</p>
-                            <ul className="space-y-1">
-                                {purchase.items.map((item) => (
-                                    <li key={item.id} className="text-sm">
-                                        • {item.product?.name || 'Unknown'}: {item.quantity} units
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsReceiveDialogOpen(false)}
-                            disabled={isReceiving}
-                        >
-                            Cancel
-                        </Button>
-                        <Button onClick={handleReceive} disabled={isReceiving}>
-                            {isReceiving ? 'Receiving...' : 'Confirm Receive'}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={isMarkPendingDialogOpen}
+                onOpenChange={setIsMarkPendingDialogOpen}
+                title="Mark purchase as pending"
+                description="This will move the purchase workflow from draft to pending. Continue?"
+                confirmLabel="Mark Pending"
+                onConfirm={handleMarkPending}
+                isLoading={isMarkingPending}
+            />
+
+            <ConfirmDialog
+                open={isReceiveDialogOpen}
+                onOpenChange={setIsReceiveDialogOpen}
+                title="Receive purchase order"
+                description="This will mark all items as received and update inventory stock levels. This action is irreversible."
+                confirmLabel="Confirm Receive"
+                onConfirm={handleReceive}
+                isLoading={isReceiving}
+            />
         </div>
     );
 }
