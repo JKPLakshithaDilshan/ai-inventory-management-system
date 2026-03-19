@@ -14,7 +14,9 @@ from app.schemas.warehouse import WarehouseCreate, WarehouseUpdate
 from app.services.base_service import BaseService
 
 
-class WarehouseService(BaseService[Warehouse, WarehouseCreate, WarehouseUpdate]):
+class WarehouseService(
+    BaseService[Warehouse, WarehouseCreate, WarehouseUpdate]
+):
     """Warehouse service with search/filter and delete safety checks."""
 
     def __init__(self, db: AsyncSession):
@@ -23,7 +25,9 @@ class WarehouseService(BaseService[Warehouse, WarehouseCreate, WarehouseUpdate])
     async def get_by_code(self, code: str) -> Optional[Warehouse]:
         """Get warehouse by unique code."""
         result = await self.db.execute(
-            select(Warehouse).where(func.lower(Warehouse.code) == code.strip().lower())
+            select(Warehouse).where(
+                func.lower(Warehouse.code) == code.strip().lower()
+            )
         )
         return result.scalar_one_or_none()
 
@@ -53,15 +57,26 @@ class WarehouseService(BaseService[Warehouse, WarehouseCreate, WarehouseUpdate])
         count_query = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(count_query)
 
-        query = query.order_by(Warehouse.created_at.desc()).offset(skip).limit(limit)
+        query = (
+            query.order_by(Warehouse.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.db.execute(query)
         items = result.scalars().all()
 
         return items, total or 0
 
-    async def has_code_conflict(self, code: str, exclude_id: Optional[int] = None) -> bool:
-        """Check if a warehouse code already exists (optionally excluding one ID)."""
-        query = select(Warehouse).where(func.lower(Warehouse.code) == code.strip().lower())
+    async def has_code_conflict(
+        self, code: str, exclude_id: Optional[int] = None
+    ) -> bool:
+        """Check if a warehouse code already exists.
+
+        Optionally excludes one warehouse ID.
+        """
+        query = select(Warehouse).where(
+            func.lower(Warehouse.code) == code.strip().lower()
+        )
         if exclude_id is not None:
             query = query.where(Warehouse.id != exclude_id)
 
@@ -69,7 +84,8 @@ class WarehouseService(BaseService[Warehouse, WarehouseCreate, WarehouseUpdate])
         return result.scalar_one_or_none() is not None
 
     async def has_dependencies(self, warehouse_id: int) -> bool:
-        """Check whether warehouse is referenced by inventory or transactions."""
+        """Check whether warehouse is referenced by inventory or
+        transactions."""
         checks = [
             select(func.count())
             .select_from(ProductLocation)

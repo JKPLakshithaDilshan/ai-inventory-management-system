@@ -61,10 +61,13 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
             status=SaleStatus.DRAFT  # DRAFT - no stock deduction yet
         )
 
-        # Create sale items (validate products exist, but don't check stock yet)
+        # Create sale items (validate products exist, but don't check
+        # stock yet)
         for item_data in obj_in.items:
             # Check product exists
-            product = await self.product_service.get_by_id(item_data.product_id)
+            product = await self.product_service.get_by_id(
+                item_data.product_id
+            )
             if not product:
                 raise ValueError(f"Product {item_data.product_id} not found")
 
@@ -83,7 +86,9 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
 
         return sale
 
-    async def complete_sale(self, sale_id: int, actor_id: Optional[int] = None) -> Sale:
+    async def complete_sale(
+        self, sale_id: int, actor_id: Optional[int] = None
+    ) -> Sale:
         """
         Complete a DRAFT sale and deduct stock via stock ledger.
 
@@ -97,14 +102,18 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
             Updated sale with COMPLETED status
 
         Raises:
-            ValueError: If sale not found, already completed, or insufficient stock
+        ValueError: If sale not found, already completed, or
+            insufficient stock
         """
         sale = await self.get_by_id(sale_id)
         if not sale:
             raise ValueError(f"Sale {sale_id} not found")
 
         if sale.status != SaleStatus.DRAFT:
-            raise ValueError(f"Cannot complete sale with status {sale.status}. Only DRAFT sales can be completed.")
+            raise ValueError(
+                f"Cannot complete sale with status {sale.status}. "
+                "Only DRAFT sales can be completed."
+            )
 
         # Deduct stock for each item via stock ledger
         for item in sale.items:
@@ -159,7 +168,8 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
 
         # Update items if provided and sale is draft
         if obj_in.items is not None and db_obj.status == SaleStatus.DRAFT:
-            # Delete existing items (no stock operations since draft doesn't touch stock)
+            # Delete existing items (no stock operations since draft
+            # doesn't touch stock)
             for item in db_obj.items:
                 await self.db.delete(item)
 
@@ -167,9 +177,13 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
             db_obj.items = []
             for item_data in obj_in.items:
                 # Check product exists
-                product = await self.product_service.get_by_id(item_data.product_id)
+                product = await self.product_service.get_by_id(
+                    item_data.product_id
+                )
                 if not product:
-                    raise ValueError(f"Product {item_data.product_id} not found")
+                    raise ValueError(
+                        f"Product {item_data.product_id} not found"
+                    )
 
                 item = SaleItem(**item_data.model_dump())
                 item.calculate_total()
@@ -206,7 +220,11 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
         total = await self.db.scalar(count_query)
 
         # Apply pagination
-        query = query.offset(skip).limit(limit).order_by(Sale.created_at.desc())
+        query = (
+            query.offset(skip)
+            .limit(limit)
+            .order_by(Sale.created_at.desc())
+        )
 
         # Execute query
         result = await self.db.execute(query)
