@@ -9,7 +9,6 @@ from app.models.product import Product
 from app.models.product_location import ProductLocation
 from app.models.stock_ledger import StockLedger, StockTransactionType
 from app.models.warehouse import Warehouse
-from app.schemas.stock_ledger import StockLedgerCreate, StockLedgerResponse
 
 
 class StockLedgerService:
