@@ -2,12 +2,20 @@
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    ConfigDict,
+    field_validator,
+    model_validator,
+)
 
 
 # Permission Schemas
 class PermissionBase(BaseModel):
     """Base permission schema."""
+
     name: str
     description: Optional[str] = None
     resource: str
@@ -16,26 +24,30 @@ class PermissionBase(BaseModel):
 
 class PermissionResponse(PermissionBase):
     """Permission response schema."""
+
     id: int
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 # Role Schemas
 class RoleBase(BaseModel):
     """Base role schema."""
+
     name: str
     description: Optional[str] = None
 
 
 class RoleCreate(RoleBase):
     """Schema for creating a role."""
+
     permission_ids: list[int] = []
 
 
 class RoleUpdate(BaseModel):
     """Schema for updating a role."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     permission_ids: Optional[list[int]] = None
@@ -43,16 +55,18 @@ class RoleUpdate(BaseModel):
 
 class RoleResponse(RoleBase):
     """Role response schema."""
+
     id: int
     created_at: datetime
     permissions: list[PermissionResponse] = []
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 # User Schemas
 class UserBase(BaseModel):
     """Base user schema."""
+
     email: EmailStr
     username: str
     full_name: str
@@ -62,6 +76,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for creating a user."""
+
     password: str = Field(..., min_length=8)
     role_ids: list[int] = Field(..., min_length=1, max_length=1)
     is_active: bool = True
@@ -73,9 +88,13 @@ class UserCreate(UserBase):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters")
         if not any(ch.isupper() for ch in value):
-            raise ValueError("Password must include at least one uppercase letter")
+            raise ValueError(
+                "Password must include at least one uppercase letter"
+            )
         if not any(ch.islower() for ch in value):
-            raise ValueError("Password must include at least one lowercase letter")
+            raise ValueError(
+                "Password must include at least one lowercase letter"
+            )
         if not any(ch.isdigit() for ch in value):
             raise ValueError("Password must include at least one number")
         return value
@@ -83,6 +102,7 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
+
     email: Optional[EmailStr] = None
     username: Optional[str] = None
     full_name: Optional[str] = None
@@ -100,9 +120,13 @@ class UserUpdate(BaseModel):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters")
         if not any(ch.isupper() for ch in value):
-            raise ValueError("Password must include at least one uppercase letter")
+            raise ValueError(
+                "Password must include at least one uppercase letter"
+            )
         if not any(ch.islower() for ch in value):
-            raise ValueError("Password must include at least one lowercase letter")
+            raise ValueError(
+                "Password must include at least one lowercase letter"
+            )
         if not any(ch.isdigit() for ch in value):
             raise ValueError("Password must include at least one number")
         return value
@@ -110,24 +134,27 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     """User response schema."""
+
     id: int
     is_active: bool
     is_superuser: bool
     created_at: datetime
     roles: list[RoleResponse] = []
     permissions: list[PermissionResponse] = []
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserLogin(BaseModel):
     """Schema for user login."""
+
     username: str
     password: str
 
 
 class Token(BaseModel):
     """Token response schema."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -135,6 +162,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     """Token payload schema."""
+
     sub: Optional[int] = None
     exp: Optional[int] = None
     type: Optional[str] = None
@@ -142,6 +170,7 @@ class TokenPayload(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     """Schema for refresh token requests."""
+
     refresh_token: str
 
 
@@ -164,9 +193,13 @@ class ResetPasswordRequest(BaseModel):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters")
         if not any(ch.isupper() for ch in value):
-            raise ValueError("Password must include at least one uppercase letter")
+            raise ValueError(
+                "Password must include at least one uppercase letter"
+            )
         if not any(ch.islower() for ch in value):
-            raise ValueError("Password must include at least one lowercase letter")
+            raise ValueError(
+                "Password must include at least one lowercase letter"
+            )
         if not any(ch.isdigit() for ch in value):
             raise ValueError("Password must include at least one number")
         return value

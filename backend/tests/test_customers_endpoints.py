@@ -38,7 +38,11 @@ def _test_app() -> FastAPI:
 
 def test_list_customers_pagination_contract(monkeypatch):
     async def mock_get_multi(
-        self, skip=0, limit=100, search=None, is_active=None,
+        self,
+        skip=0,
+        limit=100,
+        search=None,
+        is_active=None,
         customer_type=None,
     ):
         assert skip == 0

@@ -35,7 +35,11 @@ def adjustment_to_dict(adjustment: Any) -> dict[str, Any]:
         "note": adjustment.note,
         "adjustment_reference": adjustment.adjustment_reference,
         "created_by": adjustment.created_by,
-        "created_at": adjustment.created_at.isoformat() if adjustment.created_at else None,
+        "created_at": (
+            adjustment.created_at.isoformat()
+            if adjustment.created_at
+            else None
+        ),
     }
 
 
@@ -87,7 +91,9 @@ async def list_stock_adjustments(
     )
 
 
-@router.get("/current-stock", response_model=StockAdjustmentCurrentStockResponse)
+@router.get(
+    "/current-stock", response_model=StockAdjustmentCurrentStockResponse
+)
 async def get_current_stock(
     product_id: int = Query(..., gt=0),
     warehouse_id: int = Query(..., gt=0),
@@ -96,7 +102,9 @@ async def get_current_stock(
 ):
     """Get current stock for selected product/warehouse."""
     service = StockAdjustmentService(db)
-    quantity = await service.get_current_stock(product_id=product_id, warehouse_id=warehouse_id)
+    quantity = await service.get_current_stock(
+        product_id=product_id, warehouse_id=warehouse_id
+    )
 
     return StockAdjustmentCurrentStockResponse(
         product_id=product_id,
@@ -116,12 +124,19 @@ async def get_stock_adjustment(
     adjustment = await service.get_by_id(adjustment_id)
 
     if not adjustment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stock adjustment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stock adjustment not found",
+        )
 
     return adjustment
 
 
-@router.post("", response_model=StockAdjustmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=StockAdjustmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_stock_adjustment(
     payload: StockAdjustmentCreate,
     request: Request,
@@ -138,7 +153,9 @@ async def create_stock_adjustment(
             detail="Adjustment reference already exists",
         )
 
-    adjustment = await service.create_adjustment(payload=payload, actor_id=current_user.id)
+    adjustment = await service.create_adjustment(
+        payload=payload, actor_id=current_user.id
+    )
 
     await audit_service.create_log(
         user_id=current_user.id,

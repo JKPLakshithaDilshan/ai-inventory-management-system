@@ -25,7 +25,7 @@ class StockLedgerService:
         reference_id: Optional[int] = None,
         note: Optional[str] = None,
         actor_id: Optional[int] = None,
-        allow_negative: bool = False
+        allow_negative: bool = False,
     ) -> tuple[Product, ProductLocation, StockLedger]:
         """
         THE ONLY METHOD ALLOWED TO CHANGE STOCK QUANTITIES.
@@ -59,9 +59,7 @@ class StockLedgerService:
         """
         # 1. Lock and fetch product (SELECT FOR UPDATE)
         stmt = (
-            select(Product)
-            .where(Product.id == product_id)
-            .with_for_update()
+            select(Product).where(Product.id == product_id).with_for_update()
         )
         result = await db.execute(stmt)
         product = result.scalar_one_or_none()
@@ -89,7 +87,7 @@ class StockLedgerService:
             select(ProductLocation)
             .where(
                 ProductLocation.product_id == product_id,
-                ProductLocation.warehouse_id == warehouse_id
+                ProductLocation.warehouse_id == warehouse_id,
             )
             .with_for_update()
         )
@@ -99,9 +97,7 @@ class StockLedgerService:
         if not location:
             # Create new location if doesn't exist
             location = ProductLocation(
-                product_id=product_id,
-                warehouse_id=warehouse_id,
-                quantity=0
+                product_id=product_id, warehouse_id=warehouse_id, quantity=0
             )
             db.add(location)
             await db.flush()  # Get ID before continuing
@@ -152,7 +148,7 @@ class StockLedgerService:
             reference_type=reference_type,
             reference_id=reference_id,
             note=note,
-            created_by=actor_id
+            created_by=actor_id,
         )
         db.add(ledger_entry)
 
@@ -174,7 +170,7 @@ class StockLedgerService:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
         page: int = 1,
-        page_size: int = 50
+        page_size: int = 50,
     ) -> tuple[list[StockLedger], int]:
         """
         Get paginated stock ledger entries with filters.
@@ -228,8 +224,7 @@ class StockLedgerService:
 
         # Apply pagination and ordering
         query = (
-            query
-            .order_by(StockLedger.created_at.desc())
+            query.order_by(StockLedger.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )

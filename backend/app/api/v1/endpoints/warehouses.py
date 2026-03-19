@@ -8,7 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import check_permission
 from app.schemas.common import MessageResponse, PaginationResponse
-from app.schemas.warehouse import WarehouseCreate, WarehouseResponse, WarehouseUpdate
+from app.schemas.warehouse import (
+    WarehouseCreate,
+    WarehouseResponse,
+    WarehouseUpdate,
+)
 from app.services.audit_service import AuditService
 from app.services.warehouse_service import WarehouseService
 
@@ -71,12 +75,16 @@ async def get_warehouse(
     warehouse = await warehouse_service.get_by_id(warehouse_id)
 
     if not warehouse:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found"
+        )
 
     return warehouse
 
 
-@router.post("", response_model=WarehouseResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=WarehouseResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_warehouse(
     warehouse_in: WarehouseCreate,
     request: Request,
@@ -123,9 +131,13 @@ async def update_warehouse(
 
     warehouse = await warehouse_service.get_by_id(warehouse_id)
     if not warehouse:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found"
+        )
 
-    if warehouse_in.code and await warehouse_service.has_code_conflict(warehouse_in.code, exclude_id=warehouse_id):
+    if warehouse_in.code and await warehouse_service.has_code_conflict(
+        warehouse_in.code, exclude_id=warehouse_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Warehouse with this code already exists",
@@ -162,12 +174,17 @@ async def delete_warehouse(
 
     warehouse = await warehouse_service.get_by_id(warehouse_id)
     if not warehouse:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Warehouse not found"
+        )
 
     if await warehouse_service.has_dependencies(warehouse_id):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Warehouse cannot be deleted because it is referenced by inventory or transactions",
+            detail=(
+                "Warehouse cannot be deleted because it is referenced by "
+                "inventory or transactions"
+            ),
         )
 
     old_values = warehouse_to_dict(warehouse)

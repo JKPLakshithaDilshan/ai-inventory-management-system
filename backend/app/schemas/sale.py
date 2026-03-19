@@ -10,6 +10,7 @@ from app.schemas.product import ProductResponse
 # Sale Item Schemas
 class SaleItemBase(BaseModel):
     """Base sale item schema."""
+
     product_id: int
     quantity: int = Field(gt=0)
     unit_price: float = Field(ge=0)
@@ -19,11 +20,13 @@ class SaleItemBase(BaseModel):
 
 class SaleItemCreate(SaleItemBase):
     """Schema for creating a sale item."""
+
     pass
 
 
 class SaleItemUpdate(BaseModel):
     """Schema for updating a sale item."""
+
     product_id: Optional[int] = None
     quantity: Optional[int] = Field(None, gt=0)
     unit_price: Optional[float] = Field(None, ge=0)
@@ -33,18 +36,20 @@ class SaleItemUpdate(BaseModel):
 
 class SaleItemResponse(SaleItemBase):
     """Sale item response schema."""
+
     id: int
     sale_id: int
     total_price: float
     product: Optional[ProductResponse] = None
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 # Sale Schemas
 class SaleBase(BaseModel):
     """Base sale schema."""
+
     warehouse_id: int
     customer_id: Optional[int] = None
     sale_date: date
@@ -60,11 +65,13 @@ class SaleBase(BaseModel):
 
 class SaleCreate(SaleBase):
     """Schema for creating a sale."""
+
     items: list[SaleItemCreate] = Field(..., min_length=1)
 
 
 class SaleUpdate(BaseModel):
     """Schema for updating a sale."""
+
     customer_id: Optional[int] = None
     sale_date: Optional[date] = None
     customer_name: Optional[str] = None
@@ -81,6 +88,7 @@ class SaleUpdate(BaseModel):
 
 class SaleResponse(SaleBase):
     """Sale response schema."""
+
     id: int
     invoice_number: str
     user_id: int
@@ -91,5 +99,5 @@ class SaleResponse(SaleBase):
     items: list[SaleItemResponse] = []
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)

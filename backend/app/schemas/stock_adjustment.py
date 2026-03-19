@@ -55,6 +55,8 @@ class StockAdjustmentListFilters(BaseModel):
 
     product_id: Optional[int] = None
     warehouse_id: Optional[int] = None
-    adjustment_type: Optional[str] = Field(None, pattern="^(increase|decrease)$")
+    adjustment_type: Optional[str] = Field(
+        None, pattern="^(increase|decrease)$"
+    )
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None

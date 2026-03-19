@@ -107,8 +107,7 @@ def test_create_warehouse_duplicate_code(monkeypatch):
 
     assert response.status_code == 400
     assert (
-        response.json()["detail"]
-        == "Warehouse with this code already exists"
+        response.json()["detail"] == "Warehouse with this code already exists"
     )
 
 

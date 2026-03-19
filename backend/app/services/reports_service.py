@@ -1,6 +1,6 @@
 """Reports service for generating inventory, sales, and purchase reports."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +11,6 @@ from app.models.product import Product, StockStatus, Category
 from app.models.sale import Sale, SaleItem, SaleStatus
 from app.models.purchase import Purchase, PurchaseItem, PurchaseStatus
 from app.models.stock_ledger import StockLedger, StockTransactionType
-from app.models.warehouse import Warehouse
-from app.models.supplier import Supplier
 from app.models.product_location import ProductLocation
 
 
@@ -28,7 +26,7 @@ class ReportsService:
         category: Optional[str] = None,
         stock_status: Optional[StockStatus] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> tuple[list[dict], int]:
         """
         Generate inventory summary report.
@@ -61,7 +59,7 @@ class ReportsService:
                 location_query = select(ProductLocation).where(
                     and_(
                         ProductLocation.product_id == product.id,
-                        ProductLocation.warehouse_id == warehouse_id
+                        ProductLocation.warehouse_id == warehouse_id,
                     )
                 )
                 location_result = await self.db.execute(location_query)
@@ -70,23 +68,23 @@ class ReportsService:
             else:
                 warehouse_qty = product.quantity  # Total across all warehouses
 
-            report_data.append({
-                "product_id": product.id,
-                "sku": product.sku,
-                "name": product.name,
-                "category": (
-                    product.category.name
-                    if product.category
-                    else None
-                ),
-                "quantity": warehouse_qty,
-                "unit": product.unit,
-                "cost_price": float(product.cost_price),
-                "selling_price": float(product.selling_price),
-                "stock_value": float(product.cost_price * warehouse_qty),
-                "stock_status": product.stock_status.value,
-                "reorder_level": product.reorder_level,
-            })
+            report_data.append(
+                {
+                    "product_id": product.id,
+                    "sku": product.sku,
+                    "name": product.name,
+                    "category": (
+                        product.category.name if product.category else None
+                    ),
+                    "quantity": warehouse_qty,
+                    "unit": product.unit,
+                    "cost_price": float(product.cost_price),
+                    "selling_price": float(product.selling_price),
+                    "stock_value": float(product.cost_price * warehouse_qty),
+                    "stock_status": product.stock_status.value,
+                    "reorder_level": product.reorder_level,
+                }
+            )
 
         return report_data, total
 
@@ -97,7 +95,7 @@ class ReportsService:
         customer_id: Optional[int] = None,
         product_id: Optional[int] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> tuple[list[dict], int, dict]:
         """
         Generate sales report with summary statistics.
@@ -130,7 +128,7 @@ class ReportsService:
             func.count(Sale.id).label("total_sales"),
             func.sum(Sale.total_amount).label("total_revenue"),
             func.avg(Sale.total_amount).label("avg_order_value"),
-            func.sum(Sale.discount_amount).label("total_discounts")
+            func.sum(Sale.discount_amount).label("total_discounts"),
         ).select_from(query.subquery())
         summary_result = await self.db.execute(summary_query)
         summary_row = summary_result.one()
@@ -150,18 +148,20 @@ class ReportsService:
         # Build report data
         report_data = []
         for sale in sales:
-            report_data.append({
-                "sale_id": sale.id,
-                "invoice_number": sale.invoice_number,
-                "sale_date": sale.sale_date.isoformat(),
-                "customer_id": sale.customer_id,
-                "customer_name": sale.customer_name,
-                "total_amount": float(sale.total_amount),
-                "discount_amount": float(sale.discount_amount or 0),
-                "tax_amount": float(sale.tax_amount or 0),
-                "status": sale.status.value,
-                "payment_method": sale.payment_method,
-            })
+            report_data.append(
+                {
+                    "sale_id": sale.id,
+                    "invoice_number": sale.invoice_number,
+                    "sale_date": sale.sale_date.isoformat(),
+                    "customer_id": sale.customer_id,
+                    "customer_name": sale.customer_name,
+                    "total_amount": float(sale.total_amount),
+                    "discount_amount": float(sale.discount_amount or 0),
+                    "tax_amount": float(sale.tax_amount or 0),
+                    "status": sale.status.value,
+                    "payment_method": sale.payment_method,
+                }
+            )
 
         return report_data, total, summary
 
@@ -172,7 +172,7 @@ class ReportsService:
         supplier_id: Optional[int] = None,
         product_id: Optional[int] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> tuple[list[dict], int, dict]:
         """
         Generate purchase report with summary statistics.
@@ -200,9 +200,8 @@ class ReportsService:
             )
 
         # Get total count
-        count_query = (
-            select(func.count(Purchase.id))
-            .select_from(query.subquery())
+        count_query = select(func.count(Purchase.id)).select_from(
+            query.subquery()
         )
         total_result = await self.db.execute(count_query)
         total = total_result.scalar_one()
@@ -211,7 +210,7 @@ class ReportsService:
         summary_query = select(
             func.count(Purchase.id).label("total_purchases"),
             func.sum(Purchase.total_amount).label("total_spending"),
-            func.avg(Purchase.total_amount).label("avg_purchase_value")
+            func.avg(Purchase.total_amount).label("avg_purchase_value"),
         ).select_from(query.subquery())
         summary_result = await self.db.execute(summary_query)
         summary_row = summary_result.one()
@@ -234,25 +233,25 @@ class ReportsService:
         # Build report data
         report_data = []
         for purchase in purchases:
-            report_data.append({
-                "purchase_id": purchase.id,
-                "purchase_number": purchase.purchase_number,
-                "purchase_date": purchase.purchase_date.isoformat(),
-                "supplier_id": purchase.supplier_id,
-                "supplier_name": (
-                    purchase.supplier.name
-                    if purchase.supplier
-                    else None
-                ),
-                "total_amount": float(purchase.total_amount),
-                "tax_amount": float(purchase.tax_amount or 0),
-                "status": purchase.status.value,
-                "received_date": (
-                    purchase.received_date.isoformat()
-                    if purchase.received_date
-                    else None
-                ),
-            })
+            report_data.append(
+                {
+                    "purchase_id": purchase.id,
+                    "purchase_number": purchase.purchase_number,
+                    "purchase_date": purchase.purchase_date.isoformat(),
+                    "supplier_id": purchase.supplier_id,
+                    "supplier_name": (
+                        purchase.supplier.name if purchase.supplier else None
+                    ),
+                    "total_amount": float(purchase.total_amount),
+                    "tax_amount": float(purchase.tax_amount or 0),
+                    "status": purchase.status.value,
+                    "received_date": (
+                        purchase.received_date.isoformat()
+                        if purchase.received_date
+                        else None
+                    ),
+                }
+            )
 
         return report_data, total, summary
 
@@ -264,7 +263,7 @@ class ReportsService:
         warehouse_id: Optional[int] = None,
         transaction_type: Optional[StockTransactionType] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> tuple[list[dict], int, dict]:
         """
         Generate stock movement report from ledger.
@@ -295,12 +294,12 @@ class ReportsService:
             func.sum(func.abs(StockLedger.qty_change)).label(
                 "total_units_moved"
             ),
-            func.count(StockLedger.id).filter(
-                StockLedger.qty_change > 0
-            ).label("total_inbound"),
-            func.count(StockLedger.id).filter(
-                StockLedger.qty_change < 0
-            ).label("total_outbound")
+            func.count(StockLedger.id)
+            .filter(StockLedger.qty_change > 0)
+            .label("total_inbound"),
+            func.count(StockLedger.id)
+            .filter(StockLedger.qty_change < 0)
+            .label("total_outbound"),
         ).select_from(query.subquery())
         summary_result = await self.db.execute(summary_query)
         summary_row = summary_result.one()
@@ -324,29 +323,27 @@ class ReportsService:
         # Build report data
         report_data = []
         for movement in movements:
-            report_data.append({
-                "ledger_id": movement.id,
-                "created_at": movement.created_at.isoformat(),
-                "product_id": movement.product_id,
-                "product_name": (
-                    movement.product.name
-                    if movement.product
-                    else None
-                ),
-                "warehouse_id": movement.warehouse_id,
-                "warehouse_name": (
-                    movement.warehouse.name
-                    if movement.warehouse
-                    else None
-                ),
-                "type": movement.type.value,
-                "qty_change": movement.qty_change,
-                "qty_before": movement.qty_before,
-                "qty_after": movement.qty_after,
-                "reference_type": movement.reference_type,
-                "reference_id": movement.reference_id,
-                "note": movement.note,
-            })
+            report_data.append(
+                {
+                    "ledger_id": movement.id,
+                    "created_at": movement.created_at.isoformat(),
+                    "product_id": movement.product_id,
+                    "product_name": (
+                        movement.product.name if movement.product else None
+                    ),
+                    "warehouse_id": movement.warehouse_id,
+                    "warehouse_name": (
+                        movement.warehouse.name if movement.warehouse else None
+                    ),
+                    "type": movement.type.value,
+                    "qty_change": movement.qty_change,
+                    "qty_before": movement.qty_before,
+                    "qty_after": movement.qty_after,
+                    "reference_type": movement.reference_type,
+                    "reference_id": movement.reference_id,
+                    "note": movement.note,
+                }
+            )
 
         return report_data, total, summary
 
@@ -371,7 +368,7 @@ class ReportsService:
             fields = list(data[0].keys())
 
         writer = csv.DictWriter(
-            output, fieldnames=fields, extrasaction='ignore'
+            output, fieldnames=fields, extrasaction="ignore"
         )
         writer.writeheader()
         writer.writerows(data)

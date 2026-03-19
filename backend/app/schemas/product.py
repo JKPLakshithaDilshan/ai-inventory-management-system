@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ConfigDict
 # Category Schemas
 class CategoryBase(BaseModel):
     """Base category schema."""
+
     name: str
     description: Optional[str] = None
     parent_id: Optional[int] = None
@@ -15,11 +16,13 @@ class CategoryBase(BaseModel):
 
 class CategoryCreate(CategoryBase):
     """Schema for creating a category."""
+
     pass
 
 
 class CategoryUpdate(BaseModel):
     """Schema for updating a category."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     parent_id: Optional[int] = None
@@ -27,15 +30,17 @@ class CategoryUpdate(BaseModel):
 
 class CategoryResponse(CategoryBase):
     """Category response schema."""
+
     id: int
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 # Product Schemas
 class ProductBase(BaseModel):
     """Base product schema."""
+
     sku: str
     name: str
     description: Optional[str] = None
@@ -52,11 +57,13 @@ class ProductBase(BaseModel):
 
 class ProductCreate(ProductBase):
     """Schema for creating a product."""
+
     pass
 
 
 class ProductUpdate(BaseModel):
     """Schema for updating a product."""
+
     sku: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
@@ -73,10 +80,11 @@ class ProductUpdate(BaseModel):
 
 class ProductResponse(ProductBase):
     """Product response schema."""
+
     id: int
     stock_status: str
     created_at: datetime
     updated_at: datetime
     category: Optional[CategoryResponse] = None
-    
+
     model_config = ConfigDict(from_attributes=True)

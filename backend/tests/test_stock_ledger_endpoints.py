@@ -41,9 +41,17 @@ def _test_app() -> FastAPI:
 
 def test_list_stock_ledger_entries_basic(monkeypatch):
     """Test listing stock ledger entries with basic pagination."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         assert page == 1
         assert page_size == 100
@@ -88,9 +96,17 @@ def test_list_stock_ledger_entries_basic(monkeypatch):
 
 def test_list_stock_ledger_with_filters(monkeypatch):
     """Test listing stock ledger entries with all filters applied."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         # Verify all filters are passed correctly
         assert product_id == 10
@@ -150,6 +166,7 @@ def test_list_stock_ledger_with_filters(monkeypatch):
 
 def test_get_stock_ledger_entry_by_id_success(monkeypatch):
     """Test retrieving a single stock ledger entry by ID."""
+
     async def mock_get_by_id(db, ledger_id):
         assert ledger_id == 123
         return SimpleNamespace(
@@ -187,6 +204,7 @@ def test_get_stock_ledger_entry_by_id_success(monkeypatch):
 
 def test_get_stock_ledger_entry_not_found(monkeypatch):
     """Test 404 response when ledger entry doesn't exist."""
+
     async def mock_get_by_id(db, ledger_id):
         return None  # Entry not found
 
@@ -202,9 +220,17 @@ def test_get_stock_ledger_entry_not_found(monkeypatch):
 
 def test_list_stock_ledger_pagination_calculation(monkeypatch):
     """Test pagination calculations work correctly."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         # Verify page calculation from skip/limit
         assert page == 3  # skip=40, limit=20 → page 3
@@ -226,9 +252,17 @@ def test_list_stock_ledger_pagination_calculation(monkeypatch):
 
 def test_list_stock_ledger_with_product_filter_only(monkeypatch):
     """Test filtering by product only."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         assert product_id == 25
         assert warehouse_id is None
@@ -250,9 +284,17 @@ def test_list_stock_ledger_with_product_filter_only(monkeypatch):
 
 def test_list_stock_ledger_with_warehouse_filter_only(monkeypatch):
     """Test filtering by warehouse only."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         assert product_id is None
         assert warehouse_id == 8
@@ -274,9 +316,17 @@ def test_list_stock_ledger_with_warehouse_filter_only(monkeypatch):
 
 def test_list_stock_ledger_with_type_filter(monkeypatch):
     """Test filtering by transaction type."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         assert transaction_type == StockTransactionType.TRANSFER
         return [], 0
@@ -296,9 +346,17 @@ def test_list_stock_ledger_with_type_filter(monkeypatch):
 
 def test_list_stock_ledger_empty_results(monkeypatch):
     """Test handling empty ledger result set."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         return [], 0  # No entries
 
@@ -322,9 +380,17 @@ def test_list_stock_ledger_empty_results(monkeypatch):
 
 def test_list_stock_ledger_multiple_entries(monkeypatch):
     """Test listing multiple ledger entries."""
+
     async def mock_get_ledger_entries(
-        db, product_id=None, warehouse_id=None, transaction_type=None,
-        reference_type=None, date_from=None, date_to=None, page=1, page_size=50
+        db,
+        product_id=None,
+        warehouse_id=None,
+        transaction_type=None,
+        reference_type=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=50,
     ):
         return [
             SimpleNamespace(
@@ -332,29 +398,42 @@ def test_list_stock_ledger_multiple_entries(monkeypatch):
                 product_id=1,
                 warehouse_id=1,
                 type=StockTransactionType.IN,
-                qty_change=100, qty_before=0, qty_after=100,
-                reference_type="purchase", reference_id=1, note=None,
-                created_by=1, created_at=datetime(2026, 3, 1, 10, 0, 0),
+                qty_change=100,
+                qty_before=0,
+                qty_after=100,
+                reference_type="purchase",
+                reference_id=1,
+                note=None,
+                created_by=1,
+                created_at=datetime(2026, 3, 1, 10, 0, 0),
             ),
             SimpleNamespace(
                 id=2,
                 product_id=1,
                 warehouse_id=1,
                 type=StockTransactionType.OUT,
-                qty_change=-30, qty_before=100, qty_after=70,
-                reference_type="sale", reference_id=1, note=None,
-                created_by=1, created_at=datetime(2026, 3, 2, 14, 0, 0),
+                qty_change=-30,
+                qty_before=100,
+                qty_after=70,
+                reference_type="sale",
+                reference_id=1,
+                note=None,
+                created_by=1,
+                created_at=datetime(2026, 3, 2, 14, 0, 0),
             ),
             SimpleNamespace(
                 id=3,
                 product_id=1,
                 warehouse_id=1,
                 type=StockTransactionType.ADJUST,
-                qty_change=5, qty_before=70, qty_after=75,
+                qty_change=5,
+                qty_before=70,
+                qty_after=75,
                 reference_type="stock_adjustment",
                 reference_id=1,
                 note="Count correction",
-                created_by=1, created_at=datetime(2026, 3, 3, 9, 0, 0),
+                created_by=1,
+                created_at=datetime(2026, 3, 3, 9, 0, 0),
             ),
         ], 3
 

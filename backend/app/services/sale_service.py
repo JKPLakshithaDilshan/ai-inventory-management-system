@@ -53,12 +53,12 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
         invoice_number = await self.generate_invoice_number()
 
         # Create sale in DRAFT status
-        sale_data = obj_in.model_dump(exclude={'items'})
+        sale_data = obj_in.model_dump(exclude={"items"})
         sale = Sale(
             **sale_data,
             invoice_number=invoice_number,
             user_id=user_id,
-            status=SaleStatus.DRAFT  # DRAFT - no stock deduction yet
+            status=SaleStatus.DRAFT,  # DRAFT - no stock deduction yet
         )
 
         # Create sale items (validate products exist, but don't check
@@ -133,7 +133,7 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
                 reference_id=sale.id,
                 note=f"Sale {sale.invoice_number}",
                 actor_id=actor_id or sale.user_id,
-                allow_negative=False  # Prevent negative stock
+                allow_negative=False,  # Prevent negative stock
             )
 
         # Update sale status to COMPLETED
@@ -162,7 +162,7 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
                 raise ValueError(f"Customer {obj_in.customer_id} not found")
 
         # Update basic fields
-        obj_data = obj_in.model_dump(exclude_unset=True, exclude={'items'})
+        obj_data = obj_in.model_dump(exclude_unset=True, exclude={"items"})
         for field, value in obj_data.items():
             setattr(db_obj, field, value)
 
@@ -204,7 +204,7 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
         skip: int = 0,
         limit: int = 100,
         status: Optional[str] = None,
-        payment_status: Optional[str] = None
+        payment_status: Optional[str] = None,
     ) -> tuple[list[Sale], int]:
         """Get multiple sales with filters."""
         query = select(Sale)
@@ -221,9 +221,7 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
 
         # Apply pagination
         query = (
-            query.offset(skip)
-            .limit(limit)
-            .order_by(Sale.created_at.desc())
+            query.offset(skip).limit(limit).order_by(Sale.created_at.desc())
         )
 
         # Execute query

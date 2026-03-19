@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class AuditLogResponse(BaseModel):
     """Audit log response schema."""
+
     id: int
     user_id: Optional[int] = None
     action: str
@@ -18,5 +19,5 @@ class AuditLogResponse(BaseModel):
     old_values: Optional[dict[str, Any]] = None
     new_values: Optional[dict[str, Any]] = None
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)

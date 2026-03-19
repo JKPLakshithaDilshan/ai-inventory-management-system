@@ -31,7 +31,11 @@ def customer_to_dict(customer: Any) -> dict[str, Any]:
         "phone": customer.phone,
         "address": customer.address,
         "city": customer.city,
-        "customer_type": customer.customer_type.value if hasattr(customer.customer_type, "value") else customer.customer_type,
+        "customer_type": (
+            customer.customer_type.value
+            if hasattr(customer.customer_type, "value")
+            else customer.customer_type
+        ),
         "credit_limit": customer.credit_limit,
         "is_active": customer.is_active,
         "notes": customer.notes,
@@ -81,7 +85,9 @@ async def get_customer(
     customer = await service.get_by_id(customer_id)
 
     if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found"
+        )
 
     return customer
 
@@ -97,12 +103,16 @@ async def get_customer_summary(
     summary = await service.get_summary(customer_id)
 
     if not summary:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found"
+        )
 
     return CustomerSummaryResponse(**summary)
 
 
-@router.post("", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_customer(
     customer_in: CustomerCreate,
     request: Request,
@@ -149,9 +159,13 @@ async def update_customer(
 
     customer = await service.get_by_id(customer_id)
     if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found"
+        )
 
-    if customer_in.customer_code and await service.has_code_conflict(customer_in.customer_code, exclude_id=customer_id):
+    if customer_in.customer_code and await service.has_code_conflict(
+        customer_in.customer_code, exclude_id=customer_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Customer with this code already exists",
@@ -188,7 +202,9 @@ async def delete_customer(
 
     customer = await service.get_by_id(customer_id)
     if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found"
+        )
 
     if await service.has_sales(customer_id):
         raise HTTPException(

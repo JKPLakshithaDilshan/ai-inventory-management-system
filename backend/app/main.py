@@ -16,7 +16,7 @@ from app.api.v1.router import api_router
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -25,22 +25,22 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Lifespan context manager for startup and shutdown events.
-    
+
     Handles database initialization on startup and cleanup on shutdown.
     """
     # Startup
     logger.info("🚀 Application startup initiated")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug Mode: {settings.DEBUG}")
-    
+
     # Initialize database (for development only - use Alembic in production)
     if settings.DEBUG:
         await init_db()
-    
+
     logger.info("✅ Application startup complete")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("🛑 Application shutdown initiated")
     await close_db()
@@ -55,7 +55,7 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -74,20 +74,19 @@ app.add_middleware(
 if settings.ENVIRONMENT == "production":
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["*"]  # Configure with actual hosts in production
+        allowed_hosts=["*"],  # Configure with actual hosts in production
     )
 
 
 # Exception Handlers
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
     """Handle validation errors."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "detail": exc.errors(),
-            "body": exc.body
-        }
+        content={"detail": exc.errors(), "body": exc.body},
     )
 
 
@@ -98,8 +97,8 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "detail": "Database error occurred",
-            "error": str(exc) if settings.DEBUG else "Internal server error"
-        }
+            "error": str(exc) if settings.DEBUG else "Internal server error",
+        },
     )
 
 
@@ -110,8 +109,10 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "detail": "Internal server error",
-            "error": str(exc) if settings.DEBUG else "An unexpected error occurred"
-        }
+            "error": (
+                str(exc) if settings.DEBUG else "An unexpected error occurred"
+            ),
+        },
     )
 
 
@@ -123,7 +124,7 @@ async def root():
         "message": f"Welcome to {settings.PROJECT_NAME}",
         "version": settings.VERSION,
         "status": "online",
-        "docs": f"{settings.API_V1_STR}/docs"
+        "docs": f"{settings.API_V1_STR}/docs",
     }
 
 
@@ -134,7 +135,7 @@ async def health_check():
     return {
         "status": "healthy",
         "environment": settings.ENVIRONMENT,
-        "version": settings.VERSION
+        "version": settings.VERSION,
     }
 
 
@@ -144,11 +145,11 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=settings.DEBUG,
-        log_level="info"
+        log_level="info",
     )

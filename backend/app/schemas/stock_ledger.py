@@ -9,6 +9,7 @@ from app.models.stock_ledger import StockTransactionType
 
 class StockLedgerBase(BaseModel):
     """Base stock ledger schema."""
+
     product_id: int
     warehouse_id: int
     type: StockTransactionType
@@ -25,6 +26,7 @@ class StockLedgerCreate(BaseModel):
     Schema for creating a stock ledger entry.
     Used internally by apply_stock_change method.
     """
+
     product_id: int
     warehouse_id: int
     type: StockTransactionType
@@ -39,6 +41,7 @@ class StockLedgerCreate(BaseModel):
 
 class StockLedgerResponse(StockLedgerBase):
     """Schema for stock ledger response."""
+
     id: int
     created_by: Optional[int] = None
     created_at: datetime
@@ -49,6 +52,7 @@ class StockLedgerResponse(StockLedgerBase):
 
 class StockLedgerFilter(BaseModel):
     """Schema for filtering stock ledger entries."""
+
     product_id: Optional[int] = None
     warehouse_id: Optional[int] = None
     type: Optional[StockTransactionType] = None

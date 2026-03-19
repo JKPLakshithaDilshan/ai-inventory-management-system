@@ -17,16 +17,24 @@ class NotificationService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def sync_for_user(self, user_id: int, source_limit: int = 20) -> None:
+    async def sync_for_user(
+        self, user_id: int, source_limit: int = 20
+    ) -> None:
         """Build/refresh notifications from live business data sources."""
         activity_rows = await self.db.execute(
-            select(AuditLog).order_by(AuditLog.created_at.desc()).limit(source_limit)
+            select(AuditLog)
+            .order_by(AuditLog.created_at.desc())
+            .limit(source_limit)
         )
         activities = activity_rows.scalars().all()
 
         low_stock_rows = await self.db.execute(
             select(Product)
-            .where(Product.stock_status.in_([StockStatus.LOW_STOCK, StockStatus.OUT_OF_STOCK]))
+            .where(
+                Product.stock_status.in_(
+                    [StockStatus.LOW_STOCK, StockStatus.OUT_OF_STOCK]
+                )
+            )
             .order_by(Product.updated_at.desc())
             .limit(source_limit)
         )
@@ -36,15 +44,20 @@ class NotificationService:
             source_key = f"activity:{activity.id}"
             payload = {
                 "title": (activity.action or "Activity").title(),
-                "message": activity.description or f"{activity.resource_type} updated",
+                "message": activity.description
+                or f"{activity.resource_type} updated",
                 "type": self._map_activity_type(activity.action or ""),
-                "action_url": self._resource_to_url(activity.resource_type or ""),
+                "action_url": self._resource_to_url(
+                    activity.resource_type or ""
+                ),
                 "source_type": "activity",
                 "source_id": str(activity.id),
                 "source_key": source_key,
                 "created_at": activity.created_at,
             }
-            await self._upsert_notification(user_id=user_id, source_key=source_key, payload=payload)
+            await self._upsert_notification(
+                user_id=user_id, source_key=source_key, payload=payload
+            )
 
         for product in low_stock_products:
             source_key = f"low_stock:{product.id}"
@@ -62,11 +75,15 @@ class NotificationService:
                 "source_key": source_key,
                 "created_at": created_at,
             }
-            await self._upsert_notification(user_id=user_id, source_key=source_key, payload=payload)
+            await self._upsert_notification(
+                user_id=user_id, source_key=source_key, payload=payload
+            )
 
         await self.db.commit()
 
-    async def list_for_user(self, user_id: int, limit: int = 20) -> tuple[list[Notification], int]:
+    async def list_for_user(
+        self, user_id: int, limit: int = 20
+    ) -> tuple[list[Notification], int]:
         """Return latest notifications and unread count."""
         rows = await self.db.execute(
             select(Notification)
@@ -106,12 +123,17 @@ class NotificationService:
         """Mark all notifications as read for the user."""
         await self.db.execute(
             update(Notification)
-            .where(Notification.user_id == user_id, Notification.is_read.is_(False))
+            .where(
+                Notification.user_id == user_id,
+                Notification.is_read.is_(False),
+            )
             .values(is_read=True, read_at=datetime.utcnow())
         )
         await self.db.commit()
 
-    async def _upsert_notification(self, user_id: int, source_key: str, payload: dict[str, Any]) -> None:
+    async def _upsert_notification(
+        self, user_id: int, source_key: str, payload: dict[str, Any]
+    ) -> None:
         existing_result = await self.db.execute(
             select(Notification).where(
                 Notification.user_id == user_id,
@@ -167,7 +189,11 @@ class NotificationService:
         lowered = action.lower()
         if "delete" in lowered or "cancel" in lowered or "fail" in lowered:
             return "error"
-        if "create" in lowered or "receive" in lowered or "complete" in lowered:
+        if (
+            "create" in lowered
+            or "receive" in lowered
+            or "complete" in lowered
+        ):
             return "success"
         if "update" in lowered or "adjust" in lowered:
             return "warning"

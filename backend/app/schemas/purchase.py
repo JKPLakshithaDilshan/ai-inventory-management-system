@@ -11,6 +11,7 @@ from app.schemas.supplier import SupplierResponse
 # Purchase Item Schemas
 class PurchaseItemBase(BaseModel):
     """Base purchase item schema."""
+
     product_id: int
     quantity: int = Field(gt=0)
     unit_price: float = Field(ge=0)
@@ -22,11 +23,13 @@ class PurchaseItemBase(BaseModel):
 
 class PurchaseItemCreate(PurchaseItemBase):
     """Schema for creating a purchase item."""
+
     pass
 
 
 class PurchaseItemUpdate(BaseModel):
     """Schema for updating a purchase item."""
+
     product_id: Optional[int] = None
     quantity: Optional[int] = Field(None, gt=0)
     unit_price: Optional[float] = Field(None, ge=0)
@@ -39,19 +42,21 @@ class PurchaseItemUpdate(BaseModel):
 
 class PurchaseItemResponse(PurchaseItemBase):
     """Purchase item response schema."""
+
     id: int
     purchase_id: int
     received_quantity: int
     total_price: float
     product: Optional[ProductResponse] = None
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 # Purchase Schemas
 class PurchaseBase(BaseModel):
     """Base purchase schema."""
+
     supplier_id: int
     warehouse_id: int
     purchase_date: date
@@ -64,11 +69,13 @@ class PurchaseBase(BaseModel):
 
 class PurchaseCreate(PurchaseBase):
     """Schema for creating a purchase."""
+
     items: list[PurchaseItemCreate] = Field(..., min_length=1)
 
 
 class PurchaseUpdate(BaseModel):
     """Schema for updating a purchase."""
+
     supplier_id: Optional[int] = None
     purchase_date: Optional[date] = None
     expected_delivery_date: Optional[date] = None
@@ -83,6 +90,7 @@ class PurchaseUpdate(BaseModel):
 
 class PurchaseResponse(PurchaseBase):
     """Purchase response schema."""
+
     id: int
     purchase_number: str
     user_id: int
@@ -94,11 +102,12 @@ class PurchaseResponse(PurchaseBase):
     supplier: Optional[SupplierResponse] = None
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class ReceivePurchaseRequest(BaseModel):
     """Schema for receiving a purchase order."""
+
     items: list[dict]  # [{"purchase_item_id": int, "received_quantity": int}]
     received_date: date

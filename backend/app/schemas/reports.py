@@ -1,15 +1,12 @@
 """Reports schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
-
-from app.models.product import StockStatus
-from app.models.stock_ledger import StockTransactionType
 
 
 class InventorySummaryReportItem(BaseModel):
     """Inventory summary report item."""
+
     product_id: int
     sku: str
     name: str
@@ -21,13 +18,14 @@ class InventorySummaryReportItem(BaseModel):
     stock_value: float
     stock_status: str
     reorder_level: int
-    
+
     class Config:
         from_attributes = True
 
 
 class SalesReportItem(BaseModel):
     """Sales report item."""
+
     sale_id: int
     invoice_number: str
     sale_date: str
@@ -38,13 +36,14 @@ class SalesReportItem(BaseModel):
     tax_amount: float
     status: str
     payment_method: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class SalesReportSummary(BaseModel):
     """Sales report summary statistics."""
+
     total_sales: int
     total_revenue: float
     avg_order_value: float
@@ -53,6 +52,7 @@ class SalesReportSummary(BaseModel):
 
 class PurchaseReportItem(BaseModel):
     """Purchase report item."""
+
     purchase_id: int
     purchase_number: str
     purchase_date: str
@@ -62,13 +62,14 @@ class PurchaseReportItem(BaseModel):
     tax_amount: float
     status: str
     received_date: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class PurchaseReportSummary(BaseModel):
     """Purchase report summary statistics."""
+
     total_purchases: int
     total_spending: float
     avg_purchase_value: float
@@ -76,6 +77,7 @@ class PurchaseReportSummary(BaseModel):
 
 class StockMovementReportItem(BaseModel):
     """Stock movement report item."""
+
     ledger_id: int
     created_at: str
     product_id: int
@@ -89,13 +91,14 @@ class StockMovementReportItem(BaseModel):
     reference_type: Optional[str] = None
     reference_id: Optional[int] = None
     note: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class StockMovementReportSummary(BaseModel):
     """Stock movement report summary statistics."""
+
     total_movements: int
     total_units_moved: int
     total_inbound: int
@@ -104,6 +107,7 @@ class StockMovementReportSummary(BaseModel):
 
 class InventoryReportResponse(BaseModel):
     """Response for inventory summary report."""
+
     items: list[InventorySummaryReportItem]
     total: int
     page: int
@@ -113,6 +117,7 @@ class InventoryReportResponse(BaseModel):
 
 class SalesReportResponse(BaseModel):
     """Response for sales report."""
+
     items: list[SalesReportItem]
     total: int
     page: int
@@ -123,6 +128,7 @@ class SalesReportResponse(BaseModel):
 
 class PurchaseReportResponse(BaseModel):
     """Response for purchase report."""
+
     items: list[PurchaseReportItem]
     total: int
     page: int
@@ -133,6 +139,7 @@ class PurchaseReportResponse(BaseModel):
 
 class StockMovementReportResponse(BaseModel):
     """Response for stock movement report."""
+
     items: list[StockMovementReportItem]
     total: int
     page: int

@@ -43,7 +43,9 @@ class CustomerUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     address: Optional[str] = None
     city: Optional[str] = Field(None, max_length=100)
-    customer_type: Optional[str] = Field(None, pattern="^(individual|business)$")
+    customer_type: Optional[str] = Field(
+        None, pattern="^(individual|business)$"
+    )
     credit_limit: Optional[float] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
     notes: Optional[str] = None

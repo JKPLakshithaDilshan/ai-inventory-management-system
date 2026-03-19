@@ -26,7 +26,8 @@ async def moving_average_forecast(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(check_permission("ai:forecast:view")),
 ):
-    """Return moving-average forecast using daily sold quantities for a product."""
+    """Return moving-average forecast using daily sold quantities for
+    a product."""
     daily_sales_stmt = (
         select(
             Sale.sale_date.label("sale_date"),
@@ -52,7 +53,11 @@ async def moving_average_forecast(
     history_qty = [float(point.qty) for point in history]
 
     if history_qty:
-        lookback = history_qty[-window:] if len(history_qty) >= window else history_qty
+        lookback = (
+            history_qty[-window:]
+            if len(history_qty) >= window
+            else history_qty
+        )
         moving_avg = sum(lookback) / len(lookback)
         start_date = history[-1].date + timedelta(days=1)
     else:

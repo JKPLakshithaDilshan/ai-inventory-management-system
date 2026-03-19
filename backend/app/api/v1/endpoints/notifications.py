@@ -24,7 +24,9 @@ async def list_notifications(
     """List notifications for current user with server-side read state."""
     service = NotificationService(db)
     await service.sync_for_user(user_id=current_user.id, source_limit=limit)
-    items, unread_count = await service.list_for_user(user_id=current_user.id, limit=limit)
+    items, unread_count = await service.list_for_user(
+        user_id=current_user.id, limit=limit
+    )
 
     return NotificationListResponse(
         items=[
@@ -43,7 +45,9 @@ async def list_notifications(
     )
 
 
-@router.put("/{notification_id}/read", response_model=NotificationMarkReadResponse)
+@router.put(
+    "/{notification_id}/read", response_model=NotificationMarkReadResponse
+)
 async def mark_notification_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
@@ -51,9 +55,14 @@ async def mark_notification_read(
 ):
     """Mark one notification as read."""
     service = NotificationService(db)
-    updated = await service.mark_read(user_id=current_user.id, notification_id=notification_id)
+    updated = await service.mark_read(
+        user_id=current_user.id, notification_id=notification_id
+    )
     if not updated:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found",
+        )
     return NotificationMarkReadResponse(success=True)
 
 

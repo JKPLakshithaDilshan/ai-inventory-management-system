@@ -20,13 +20,20 @@ class CustomerService(BaseService[Customer, CustomerCreate, CustomerUpdate]):
     async def get_by_code(self, customer_code: str) -> Optional[Customer]:
         """Get customer by unique customer_code."""
         result = await self.db.execute(
-            select(Customer).where(func.lower(Customer.customer_code) == customer_code.strip().lower())
+            select(Customer).where(
+                func.lower(Customer.customer_code)
+                == customer_code.strip().lower()
+            )
         )
         return result.scalar_one_or_none()
 
-    async def has_code_conflict(self, customer_code: str, exclude_id: Optional[int] = None) -> bool:
+    async def has_code_conflict(
+        self, customer_code: str, exclude_id: Optional[int] = None
+    ) -> bool:
         """Check duplicate customer code (case-insensitive)."""
-        query = select(Customer).where(func.lower(Customer.customer_code) == customer_code.strip().lower())
+        query = select(Customer).where(
+            func.lower(Customer.customer_code) == customer_code.strip().lower()
+        )
         if exclude_id is not None:
             query = query.where(Customer.id != exclude_id)
 
@@ -65,14 +72,22 @@ class CustomerService(BaseService[Customer, CustomerCreate, CustomerUpdate]):
         count_query = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(count_query)
 
-        query = query.order_by(Customer.created_at.desc()).offset(skip).limit(limit)
+        query = (
+            query.order_by(Customer.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.db.execute(query)
 
         return result.scalars().all(), total or 0
 
     async def has_sales(self, customer_id: int) -> bool:
         """Return True if customer is linked to any sale."""
-        count = await self.db.scalar(select(func.count()).select_from(Sale).where(Sale.customer_id == customer_id))
+        count = await self.db.scalar(
+            select(func.count())
+            .select_from(Sale)
+            .where(Sale.customer_id == customer_id)
+        )
         return (count or 0) > 0
 
     async def get_summary(self, customer_id: int) -> Optional[dict]:
@@ -82,11 +97,15 @@ class CustomerService(BaseService[Customer, CustomerCreate, CustomerUpdate]):
             return None
 
         total_orders = await self.db.scalar(
-            select(func.count()).select_from(Sale).where(Sale.customer_id == customer_id)
+            select(func.count())
+            .select_from(Sale)
+            .where(Sale.customer_id == customer_id)
         )
 
         total_purchase_value = await self.db.scalar(
-            select(func.coalesce(func.sum(Sale.total_amount), 0.0)).where(Sale.customer_id == customer_id)
+            select(func.coalesce(func.sum(Sale.total_amount), 0.0)).where(
+                Sale.customer_id == customer_id
+            )
         )
 
         sales_result = await self.db.execute(
@@ -102,7 +121,11 @@ class CustomerService(BaseService[Customer, CustomerCreate, CustomerUpdate]):
                 "id": sale.id,
                 "invoice_number": sale.invoice_number,
                 "sale_date": sale.sale_date,
-                "status": sale.status.value if hasattr(sale.status, "value") else str(sale.status),
+                "status": (
+                    sale.status.value
+                    if hasattr(sale.status, "value")
+                    else str(sale.status)
+                ),
                 "total_amount": sale.total_amount,
                 "created_at": sale.created_at,
             }

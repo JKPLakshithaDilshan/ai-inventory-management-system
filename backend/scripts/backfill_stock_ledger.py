@@ -191,8 +191,7 @@ async def backfill_stock_ledger():
                             reference_type="backfill",
                             reference_id=None,
                             note=(
-                                f"Baseline stock:"
-                                f" {product.quantity} units"
+                                f"Baseline stock:" f" {product.quantity} units"
                             ),
                             created_by=admin_id,
                         )

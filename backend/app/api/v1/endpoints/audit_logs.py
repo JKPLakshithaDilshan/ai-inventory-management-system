@@ -20,7 +20,7 @@ async def list_audit_logs(
     action: str = Query(None),
     resource_type: str = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(check_permission("admin:audit:view"))
+    current_user=Depends(check_permission("admin:audit:view")),
 ):
     """
     Retrieve audit logs with pagination and filters.
@@ -31,18 +31,18 @@ async def list_audit_logs(
         limit=limit,
         user_id=user_id,
         action=action,
-        resource_type=resource_type
+        resource_type=resource_type,
     )
-    
+
     total_pages = (total + limit - 1) // limit
     page = skip // limit + 1
-    
+
     return PaginationResponse(
         items=logs,
         total=total,
         page=page,
         page_size=limit,
-        total_pages=total_pages
+        total_pages=total_pages,
     )
 
 
@@ -50,19 +50,19 @@ async def list_audit_logs(
 async def get_audit_log(
     log_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(check_permission("admin:audit:view"))
+    current_user=Depends(check_permission("admin:audit:view")),
 ):
     """
     Get audit log by ID.
     """
     audit_service = AuditService(db)
     log = await audit_service.get_by_id(log_id)
-    
+
     if not log:
         from fastapi import HTTPException, status
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Audit log not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Audit log not found"
         )
-    
+
     return log

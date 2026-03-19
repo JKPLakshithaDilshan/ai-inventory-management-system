@@ -8,6 +8,7 @@ from pydantic import ConfigDict
 
 class WarehouseBase(BaseModel):
     """Base warehouse schema."""
+
     code: str = Field(..., min_length=1, max_length=50)
     name: str = Field(..., min_length=1, max_length=255)
     address: Optional[str] = None
@@ -23,11 +24,13 @@ class WarehouseBase(BaseModel):
 
 class WarehouseCreate(WarehouseBase):
     """Schema for creating a warehouse."""
+
     pass
 
 
 class WarehouseUpdate(BaseModel):
     """Schema for updating a warehouse."""
+
     code: Optional[str] = Field(None, min_length=1, max_length=50)
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     address: Optional[str] = None
@@ -43,6 +46,7 @@ class WarehouseUpdate(BaseModel):
 
 class WarehouseResponse(WarehouseBase):
     """Schema for warehouse response."""
+
     id: int
     created_at: datetime
     updated_at: datetime

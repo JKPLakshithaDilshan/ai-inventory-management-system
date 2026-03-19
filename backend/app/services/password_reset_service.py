@@ -16,7 +16,8 @@ from app.services.email_service import EmailService
 
 
 GENERIC_FORGOT_PASSWORD_MESSAGE = (
-    "If an account with that email exists, a password reset link has been sent."
+    "If an account with that email exists, a password reset link has been "
+    "sent."
 )
 
 
@@ -52,7 +53,9 @@ class PasswordResetService:
 
         normalized_email = email.strip().lower()
 
-        user_stmt = select(User).where(func.lower(User.email) == normalized_email)
+        user_stmt = select(User).where(
+            func.lower(User.email) == normalized_email
+        )
         user_result = await self.db.execute(user_stmt)
         user = user_result.scalar_one_or_none()
 
@@ -75,14 +78,18 @@ class PasswordResetService:
 
         raw_token = secrets.token_urlsafe(48)
         token_hash = self._hash_token(raw_token)
-        expires_at = now + timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+        expires_at = now + timedelta(
+            minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+        )
 
         token_record = PasswordResetToken(
             user_id=user.id,
             token_hash=token_hash,
             expires_at=expires_at,
             requested_ip=request_ip,
-            requested_user_agent=(request_user_agent[:500] if request_user_agent else None),
+            requested_user_agent=(
+                request_user_agent[:500] if request_user_agent else None
+            ),
         )
         self.db.add(token_record)
         await self.db.flush()

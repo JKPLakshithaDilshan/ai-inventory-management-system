@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 
 class SupplierBase(BaseModel):
     """Base supplier schema."""
+
     name: str
     code: str
     email: Optional[EmailStr] = None
@@ -27,11 +28,13 @@ class SupplierBase(BaseModel):
 
 class SupplierCreate(SupplierBase):
     """Schema for creating a supplier."""
+
     pass
 
 
 class SupplierUpdate(BaseModel):
     """Schema for updating a supplier."""
+
     name: Optional[str] = None
     code: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -52,8 +55,9 @@ class SupplierUpdate(BaseModel):
 
 class SupplierResponse(SupplierBase):
     """Supplier response schema."""
+
     id: int
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)

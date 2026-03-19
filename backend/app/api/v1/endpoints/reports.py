@@ -33,12 +33,12 @@ async def get_inventory_report(
 ):
     """
     Generate inventory summary report.
-    
+
     Shows current stock levels, values, and status for all products.
     Can be filtered by warehouse, category, or stock status.
     """
     service = ReportsService(db)
-    
+
     items, total = await service.get_inventory_summary_report(
         warehouse_id=warehouse_id,
         category=category,
@@ -46,10 +46,10 @@ async def get_inventory_report(
         skip=skip,
         limit=limit,
     )
-    
+
     page = (skip // limit) + 1
     total_pages = (total + limit - 1) // limit
-    
+
     return InventoryReportResponse(
         items=items,
         total=total,
@@ -69,11 +69,11 @@ async def export_inventory_report(
 ):
     """
     Export inventory report to CSV.
-    
+
     Downloads complete inventory report as CSV file.
     """
     service = ReportsService(db)
-    
+
     # Get all data (no pagination for export)
     items, _ = await service.get_inventory_summary_report(
         warehouse_id=warehouse_id,
@@ -82,7 +82,7 @@ async def export_inventory_report(
         skip=0,
         limit=10000,  # Large limit for export
     )
-    
+
     # Generate CSV
     csv_data = ReportsService.generate_csv(
         items,
@@ -100,10 +100,13 @@ async def export_inventory_report(
             "reorder_level",
         ],
     )
-    
+
     # Return as downloadable CSV
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     headers = {
-        "Content-Disposition": f"attachment; filename=inventory_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        "Content-Disposition": (
+            f"attachment; filename=inventory_report_{timestamp}.csv"
+        )
     }
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
@@ -121,12 +124,12 @@ async def get_sales_report(
 ):
     """
     Generate sales report with summary statistics.
-    
+
     Shows completed sales with total revenue, discounts, and order metrics.
     Can be filtered by date range, customer, or product.
     """
     service = ReportsService(db)
-    
+
     # Parse dates
     parsed_date_from = None
     parsed_date_to = None
@@ -146,7 +149,7 @@ async def get_sales_report(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date_to format. Use ISO format (YYYY-MM-DD)",
             )
-    
+
     items, total, summary = await service.get_sales_report(
         date_from=parsed_date_from,
         date_to=parsed_date_to,
@@ -155,10 +158,10 @@ async def get_sales_report(
         skip=skip,
         limit=limit,
     )
-    
+
     page = (skip // limit) + 1
     total_pages = (total + limit - 1) // limit
-    
+
     return SalesReportResponse(
         items=items,
         total=total,
@@ -180,11 +183,11 @@ async def export_sales_report(
 ):
     """
     Export sales report to CSV.
-    
+
     Downloads complete sales report as CSV file.
     """
     service = ReportsService(db)
-    
+
     # Parse dates
     parsed_date_from = None
     parsed_date_to = None
@@ -204,7 +207,7 @@ async def export_sales_report(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date_to format",
             )
-    
+
     items, _, _ = await service.get_sales_report(
         date_from=parsed_date_from,
         date_to=parsed_date_to,
@@ -213,7 +216,7 @@ async def export_sales_report(
         skip=0,
         limit=10000,
     )
-    
+
     csv_data = ReportsService.generate_csv(
         items,
         fields=[
@@ -229,9 +232,12 @@ async def export_sales_report(
             "payment_method",
         ],
     )
-    
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     headers = {
-        "Content-Disposition": f"attachment; filename=sales_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        "Content-Disposition": (
+            f"attachment; filename=sales_report_{timestamp}.csv"
+        )
     }
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
@@ -249,12 +255,12 @@ async def get_purchase_report(
 ):
     """
     Generate purchase report with summary statistics.
-    
+
     Shows completed purchases with total spending and supplier metrics.
     Can be filtered by date range, supplier, or product.
     """
     service = ReportsService(db)
-    
+
     # Parse dates
     parsed_date_from = None
     parsed_date_to = None
@@ -274,7 +280,7 @@ async def get_purchase_report(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date_to format. Use ISO format (YYYY-MM-DD)",
             )
-    
+
     items, total, summary = await service.get_purchase_report(
         date_from=parsed_date_from,
         date_to=parsed_date_to,
@@ -283,10 +289,10 @@ async def get_purchase_report(
         skip=skip,
         limit=limit,
     )
-    
+
     page = (skip // limit) + 1
     total_pages = (total + limit - 1) // limit
-    
+
     return PurchaseReportResponse(
         items=items,
         total=total,
@@ -308,11 +314,11 @@ async def export_purchase_report(
 ):
     """
     Export purchase report to CSV.
-    
+
     Downloads complete purchase report as CSV file.
     """
     service = ReportsService(db)
-    
+
     # Parse dates
     parsed_date_from = None
     parsed_date_to = None
@@ -332,7 +338,7 @@ async def export_purchase_report(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date_to format",
             )
-    
+
     items, _, _ = await service.get_purchase_report(
         date_from=parsed_date_from,
         date_to=parsed_date_to,
@@ -341,7 +347,7 @@ async def export_purchase_report(
         skip=0,
         limit=10000,
     )
-    
+
     csv_data = ReportsService.generate_csv(
         items,
         fields=[
@@ -356,9 +362,12 @@ async def export_purchase_report(
             "received_date",
         ],
     )
-    
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     headers = {
-        "Content-Disposition": f"attachment; filename=purchase_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        "Content-Disposition": (
+            f"attachment; filename=purchase_report_{timestamp}.csv"
+        )
     }
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
@@ -377,12 +386,12 @@ async def get_stock_movement_report(
 ):
     """
     Generate stock movement report from ledger.
-    
+
     Shows all stock movements with inbound/outbound statistics.
     Can be filtered by date range, product, warehouse, or transaction type.
     """
     service = ReportsService(db)
-    
+
     # Parse dates
     parsed_date_from = None
     parsed_date_to = None
@@ -402,7 +411,7 @@ async def get_stock_movement_report(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date_to format. Use ISO format (YYYY-MM-DD)",
             )
-    
+
     items, total, summary = await service.get_stock_movement_report(
         date_from=parsed_date_from,
         date_to=parsed_date_to,
@@ -412,10 +421,10 @@ async def get_stock_movement_report(
         skip=skip,
         limit=limit,
     )
-    
+
     page = (skip // limit) + 1
     total_pages = (total + limit - 1) // limit
-    
+
     return StockMovementReportResponse(
         items=items,
         total=total,
@@ -438,11 +447,11 @@ async def export_stock_movement_report(
 ):
     """
     Export stock movement report to CSV.
-    
+
     Downloads complete stock movement report as CSV file.
     """
     service = ReportsService(db)
-    
+
     # Parse dates
     parsed_date_from = None
     parsed_date_to = None
@@ -462,7 +471,7 @@ async def export_stock_movement_report(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date_to format",
             )
-    
+
     items, _, _ = await service.get_stock_movement_report(
         date_from=parsed_date_from,
         date_to=parsed_date_to,
@@ -472,7 +481,7 @@ async def export_stock_movement_report(
         skip=0,
         limit=10000,
     )
-    
+
     csv_data = ReportsService.generate_csv(
         items,
         fields=[
@@ -491,8 +500,11 @@ async def export_stock_movement_report(
             "note",
         ],
     )
-    
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     headers = {
-        "Content-Disposition": f"attachment; filename=stock_movement_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        "Content-Disposition": (
+            f"attachment; filename=stock_movement_report_{timestamp}.csv"
+        )
     }
     return Response(content=csv_data, media_type="text/csv", headers=headers)
