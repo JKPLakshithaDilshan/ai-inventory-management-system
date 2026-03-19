@@ -3,12 +3,14 @@
 These tests execute against a real async database and real service-layer logic.
 
 Setup strategy:
-- Uses TEST_DATABASE_URI environment variable (must point to a dedicated test DB)
+- Uses TEST_DATABASE_URI environment variable.
+  It must point to a dedicated test DB.
 - Creates schema once per test session from SQLAlchemy models
 - Truncates all tables before each test for isolation
 
 Run example:
-    TEST_DATABASE_URI=postgresql+asyncpg://user:pass@localhost:5432/ai_inventory_test \
+    export TEST_DATABASE_URI="postgresql+asyncpg://user:pass@localhost:5432/"
+    export TEST_DATABASE_URI+="ai_inventory_test"
     pytest backend/tests/test_inventory_integration.py -q
 """
 
@@ -23,7 +25,11 @@ import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 # Ensure model metadata is fully loaded for create_all.
 import app.models  # noqa: F401
@@ -54,11 +60,17 @@ def test_db_url() -> str:
     """
     db_url = os.getenv("TEST_DATABASE_URI")
     if not db_url:
-        pytest.skip("TEST_DATABASE_URI is not set; skipping integration tests", allow_module_level=True)
+        pytest.skip(
+            "TEST_DATABASE_URI is not set; skipping integration tests",
+            allow_module_level=True,
+        )
 
     if "test" not in db_url.lower():
         pytest.skip(
-            "Refusing to run destructive integration tests on non-test database URL",
+            (
+                "Refusing to run destructive integration tests "
+                "on non-test database URL"
+            ),
             allow_module_level=True,
         )
 
@@ -77,14 +89,18 @@ async def engine(test_db_url: str):
 
 @pytest_asyncio.fixture(scope="session")
 async def session_factory(engine):
-    return async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    return async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def clean_tables(session_factory):
     """Truncate every table for deterministic integration tests."""
     table_names = [f'"{table.name}"' for table in Base.metadata.sorted_tables]
-    truncate_sql = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE"
+    truncate_sql = (
+        f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE"
+    )
 
     async with session_factory() as session:
         await session.execute(text(truncate_sql))
@@ -113,8 +129,12 @@ async def seed_core_entities(db_session: AsyncSession):
     )
     user.roles = [role]
 
-    supplier = Supplier(name="Test Supplier", code="SUP-INT-001", is_active=True)
-    warehouse = Warehouse(code="WH-INT-001", name="Integration Warehouse", is_active=True)
+    supplier = Supplier(
+        name="Test Supplier", code="SUP-INT-001", is_active=True
+    )
+    warehouse = Warehouse(
+        code="WH-INT-001", name="Integration Warehouse", is_active=True
+    )
     product = Product(
         sku="PRD-INT-001",
         name="Integration Product",
@@ -151,7 +171,9 @@ async def seed_core_entities(db_session: AsyncSession):
     }
 
 
-async def _get_location_qty(session: AsyncSession, product_id: int, warehouse_id: int) -> int:
+async def _get_location_qty(
+    session: AsyncSession, product_id: int, warehouse_id: int
+) -> int:
     result = await session.execute(
         select(ProductLocation.quantity).where(
             ProductLocation.product_id == product_id,
@@ -162,17 +184,24 @@ async def _get_location_qty(session: AsyncSession, product_id: int, warehouse_id
     return qty or 0
 
 
-async def _ledger_entries_for_reference(session: AsyncSession, ref_type: str, ref_id: int) -> list[StockLedger]:
+async def _ledger_entries_for_reference(
+    session: AsyncSession, ref_type: str, ref_id: int
+) -> list[StockLedger]:
     result = await session.execute(
         select(StockLedger)
-        .where(StockLedger.reference_type == ref_type, StockLedger.reference_id == ref_id)
+        .where(
+            StockLedger.reference_type == ref_type,
+            StockLedger.reference_id == ref_id,
+        )
         .order_by(StockLedger.id.asc())
     )
     return list(result.scalars().all())
 
 
 @pytest.mark.asyncio
-async def test_purchase_receive_increases_stock_and_writes_ledger(db_session: AsyncSession, seed_core_entities):
+async def test_purchase_receive_increases_stock_and_writes_ledger(
+    db_session: AsyncSession, seed_core_entities
+):
     user = seed_core_entities["user"]
     supplier = seed_core_entities["supplier"]
     warehouse = seed_core_entities["warehouse"]
@@ -201,7 +230,9 @@ async def test_purchase_receive_increases_stock_and_writes_ledger(db_session: As
 
     received = await purchase_service.receive_purchase(
         purchase_id=purchase.id,
-        items=[{"purchase_item_id": purchase.items[0].id, "received_quantity": 5}],
+        items=[
+            {"purchase_item_id": purchase.items[0].id, "received_quantity": 5}
+        ],
         received_date=date.today(),
     )
     await db_session.commit()
@@ -212,7 +243,9 @@ async def test_purchase_receive_increases_stock_and_writes_ledger(db_session: As
     qty_after = await _get_location_qty(db_session, product.id, warehouse.id)
     assert qty_after == qty_before + 5
 
-    entries = await _ledger_entries_for_reference(db_session, "purchase", purchase.id)
+    entries = await _ledger_entries_for_reference(
+        db_session, "purchase", purchase.id
+    )
     assert len(entries) == 1
     assert entries[0].type == StockTransactionType.IN
     assert entries[0].qty_change == 5
@@ -221,7 +254,9 @@ async def test_purchase_receive_increases_stock_and_writes_ledger(db_session: As
 
 
 @pytest.mark.asyncio
-async def test_sale_complete_decreases_stock_only_on_completion(db_session: AsyncSession, seed_core_entities):
+async def test_sale_complete_decreases_stock_only_on_completion(
+    db_session: AsyncSession, seed_core_entities
+):
     user = seed_core_entities["user"]
     warehouse = seed_core_entities["warehouse"]
     product = seed_core_entities["product"]
@@ -234,17 +269,25 @@ async def test_sale_complete_decreases_stock_only_on_completion(db_session: Asyn
         SaleCreate(
             warehouse_id=warehouse.id,
             sale_date=date.today(),
-            items=[SaleItemCreate(product_id=product.id, quantity=4, unit_price=20.0)],
+            items=[
+                SaleItemCreate(
+                    product_id=product.id, quantity=4, unit_price=20.0
+                )
+            ],
         ),
         user_id=user.id,
     )
     await db_session.flush()
 
     # Draft creation must not mutate stock.
-    qty_after_create = await _get_location_qty(db_session, product.id, warehouse.id)
+    qty_after_create = await _get_location_qty(
+        db_session, product.id, warehouse.id
+    )
     assert qty_after_create == qty_before
 
-    no_entries = await _ledger_entries_for_reference(db_session, "sale", sale.id)
+    no_entries = await _ledger_entries_for_reference(
+        db_session, "sale", sale.id
+    )
     assert len(no_entries) == 0
 
     completed = await sale_service.complete_sale(sale.id, actor_id=user.id)
@@ -252,7 +295,9 @@ async def test_sale_complete_decreases_stock_only_on_completion(db_session: Asyn
 
     assert completed.status == SaleStatus.COMPLETED
 
-    qty_after_complete = await _get_location_qty(db_session, product.id, warehouse.id)
+    qty_after_complete = await _get_location_qty(
+        db_session, product.id, warehouse.id
+    )
     assert qty_after_complete == qty_before - 4
 
     entries = await _ledger_entries_for_reference(db_session, "sale", sale.id)
@@ -262,7 +307,9 @@ async def test_sale_complete_decreases_stock_only_on_completion(db_session: Asyn
 
 
 @pytest.mark.asyncio
-async def test_stock_adjustments_modify_stock_correctly(db_session: AsyncSession, seed_core_entities):
+async def test_stock_adjustments_modify_stock_correctly(
+    db_session: AsyncSession, seed_core_entities
+):
     user = seed_core_entities["user"]
     warehouse = seed_core_entities["warehouse"]
     product = seed_core_entities["product"]
@@ -302,8 +349,14 @@ async def test_stock_adjustments_modify_stock_correctly(db_session: AsyncSession
     final_qty = await _get_location_qty(db_session, product.id, warehouse.id)
     assert final_qty == start_qty + 3 - 2
 
-    inc_entries = await _ledger_entries_for_reference(db_session, "stock_adjustment", inc.id)
-    dec_entries = await _ledger_entries_for_reference(db_session, "stock_adjustment", dec.id)
+    inc_entries = await _ledger_entries_for_reference(
+        db_session, "stock_adjustment", inc.id
+    )
+    dec_entries = await _ledger_entries_for_reference(
+        db_session,
+        "stock_adjustment",
+        dec.id,
+    )
 
     assert len(inc_entries) == 1
     assert inc_entries[0].qty_change == 3
@@ -315,15 +368,24 @@ async def test_stock_adjustments_modify_stock_correctly(db_session: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_stock_ledger_history_is_append_only(db_session: AsyncSession, seed_core_entities):
+async def test_stock_ledger_history_is_append_only(
+    db_session: AsyncSession,
+    seed_core_entities,
+):
     user = seed_core_entities["user"]
     warehouse = seed_core_entities["warehouse"]
     product = seed_core_entities["product"]
 
     # Existing baseline entry
     first_entry = (
-        await db_session.execute(select(StockLedger).order_by(StockLedger.id.asc()))
-    ).scalars().first()
+        (
+            await db_session.execute(
+                select(StockLedger).order_by(StockLedger.id.asc())
+            )
+        )
+        .scalars()
+        .first()
+    )
     assert first_entry is not None
 
     first_snapshot = {
@@ -362,7 +424,10 @@ async def test_stock_ledger_history_is_append_only(db_session: AsyncSession, see
 
 
 @pytest.mark.asyncio
-async def test_sale_completion_fails_when_stock_insufficient(db_session: AsyncSession, seed_core_entities):
+async def test_sale_completion_fails_when_stock_insufficient(
+    db_session: AsyncSession,
+    seed_core_entities,
+):
     user = seed_core_entities["user"]
     warehouse = seed_core_entities["warehouse"]
     product = seed_core_entities["product"]
@@ -504,9 +569,7 @@ async def test_concurrent_sale_completion_only_one_succeeds(
     outcomes = [result_a, result_b]
     assert outcomes.count("success") == 1
 
-    failures = [
-        outcome for outcome in outcomes if outcome != "success"
-    ]
+    failures = [outcome for outcome in outcomes if outcome != "success"]
     assert len(failures) == 1
     assert isinstance(failures[0], HTTPException)
     assert failures[0].status_code == 400
@@ -523,9 +586,7 @@ async def test_concurrent_sale_completion_only_one_succeeds(
             )
         )
         draft_count = await verify_session.scalar(
-            select(func.count(Sale.id)).where(
-                Sale.status == SaleStatus.DRAFT
-            )
+            select(func.count(Sale.id)).where(Sale.status == SaleStatus.DRAFT)
         )
 
         assert completed_count == 1
