@@ -7,9 +7,9 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from sqlalchemy import select
-from app.core.database import AsyncSessionLocal
-from app.models.warehouse import Warehouse
+from sqlalchemy import select  # noqa: E402
+from app.core.database import AsyncSessionLocal  # noqa: E402
+from app.models.warehouse import Warehouse  # noqa: E402
 
 
 async def seed_default_warehouse():
@@ -19,11 +19,11 @@ async def seed_default_warehouse():
             # Check if warehouses exist
             result = await db.execute(select(Warehouse))
             existing = result.scalar_one_or_none()
-            
+
             if existing:
                 print(f"✅ Warehouse already exists: {existing.name}")
                 return
-            
+
             # Create default warehouse
             warehouse = Warehouse(
                 code="WH-MAIN",
@@ -31,15 +31,18 @@ async def seed_default_warehouse():
                 address="123 Main Street",
                 city="Colombo",
                 country="Sri Lanka",
-                is_active=True
+                is_active=True,
             )
-            
+
             db.add(warehouse)
             await db.commit()
             await db.refresh(warehouse)
-            
-            print(f"✅ Created default warehouse: {warehouse.name} (ID: {warehouse.id})")
-            
+
+            print(
+                f"✅ Created default warehouse: {warehouse.name} "
+                f"(ID: {warehouse.id})"
+            )
+
         except Exception as e:
             print(f"❌ Error seeding warehouse: {e}")
             await db.rollback()
