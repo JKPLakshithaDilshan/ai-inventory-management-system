@@ -1,15 +1,30 @@
 """User management endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user, get_current_active_superuser
-from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.models.user import Role
+from app.schemas.user import RoleOption, UserCreate, UserUpdate, UserResponse
 from app.schemas.common import MessageResponse, PaginationResponse
 from app.services.user_service import UserService
 
 router = APIRouter()
+
+
+@router.get("/roles", response_model=list[RoleOption])
+async def list_roles(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    """
+    Retrieve available roles for user assignment.
+    """
+    result = await db.execute(select(Role).order_by(Role.name.asc()))
+    roles = result.scalars().all()
+    return [RoleOption(id=role.id, role_name=role.name) for role in roles]
 
 
 @router.get("", response_model=PaginationResponse[UserResponse])

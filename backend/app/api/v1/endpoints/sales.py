@@ -44,7 +44,7 @@ async def list_sales(
     )
 
 
-@router.post("", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_sale(
     sale_in: SaleCreate,
     db: AsyncSession = Depends(get_db),
@@ -57,7 +57,23 @@ async def create_sale(
     
     try:
         sale = await sale_service.create(sale_in, current_user.id)
-        return sale
+        # Manual serialization to avoid Pydantic validation issues with nested relationships
+        from sqlalchemy import inspect
+        mapper = inspect(sale)
+        result = {}
+        for column in mapper.attrs:
+            val = getattr(sale, column.key)
+            if column.key == 'status':
+                result[column.key] = val.value if hasattr(val, 'value') else str(val)
+            elif column.key == 'payment_status':
+                result[column.key] = val.value if hasattr(val, 'value') else str(val)
+            elif column.key == 'items':
+                result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'discount_percent': getattr(item, 'discount_percent', 0)} for item in val]
+            elif hasattr(val, 'isoformat'):
+                result[column.key] = val.isoformat()
+            else:
+                result[column.key] = val
+        return result
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -86,7 +102,7 @@ async def get_sale(
     return sale
 
 
-@router.post("/{sale_id}/complete", response_model=SaleResponse)
+@router.post("/{sale_id}/complete")
 async def complete_sale(
     sale_id: int,
     db: AsyncSession = Depends(get_db),
@@ -105,7 +121,23 @@ async def complete_sale(
     
     try:
         sale = await sale_service.complete_sale(sale_id, current_user.id)
-        return sale
+        # Manual serialization to avoid Pydantic validation issues with nested relationships
+        from sqlalchemy import inspect
+        mapper = inspect(sale)
+        result = {}
+        for column in mapper.attrs:
+            val = getattr(sale, column.key)
+            if column.key == 'status':
+                result[column.key] = val.value if hasattr(val, 'value') else str(val)
+            elif column.key == 'payment_status':
+                result[column.key] = val.value if hasattr(val, 'value') else str(val)
+            elif column.key == 'items':
+                result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'discount_percent': getattr(item, 'discount_percent', 0)} for item in val]
+            elif hasattr(val, 'isoformat'):
+                result[column.key] = val.isoformat()
+            else:
+                result[column.key] = val
+        return result
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import ai_rate_limit
 from app.core.security import get_current_user
 from app.models.sale import Sale, SaleItem, SaleStatus
 from app.schemas.forecast import (
@@ -18,7 +19,7 @@ from app.schemas.forecast import (
 router = APIRouter()
 
 
-@router.get("/moving-average", response_model=MovingAverageForecastResponse)
+@router.get("/moving-average", response_model=MovingAverageForecastResponse, dependencies=[Depends(ai_rate_limit)])
 async def moving_average_forecast(
     product_id: int = Query(..., ge=1),
     window: int = Query(7, ge=1, le=60),

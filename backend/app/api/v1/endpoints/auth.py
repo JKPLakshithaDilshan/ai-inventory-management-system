@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import login_rate_limit, refresh_rate_limit
 from app.core.security import create_access_token, create_refresh_token, get_current_user
 from app.schemas.user import Token, UserResponse
 from app.services.user_service import UserService
@@ -12,7 +13,7 @@ from app.services.user_service import UserService
 router = APIRouter()
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, dependencies=[Depends(login_rate_limit)])
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
@@ -58,7 +59,7 @@ async def read_users_me(
     return current_user
 
 
-@router.post("/refresh", response_model=Token)
+@router.post("/refresh", response_model=Token, dependencies=[Depends(refresh_rate_limit)])
 async def refresh_token(
     current_user = Depends(get_current_user)
 ):

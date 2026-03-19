@@ -49,7 +49,7 @@ async def list_purchases(
     )
 
 
-@router.post("", response_model=PurchaseResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_purchase(
     purchase_in: PurchaseCreate,
     db: AsyncSession = Depends(get_db),
@@ -60,7 +60,33 @@ async def create_purchase(
     """
     purchase_service = PurchaseService(db)
     purchase = await purchase_service.create(purchase_in, current_user.id)
-    return purchase
+    
+    # Manually serialize to dict for debugging
+    from sqlalchemy import inspect
+    mapper = inspect(purchase)
+    result = {}
+    for column in mapper.attrs:
+        val = getattr(purchase, column.key)
+        if column.key == 'status':
+            result[column.key] = val.value if hasattr(val, 'value') else str(val)
+        elif column.key == 'items':
+            result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'received_quantity': item.received_quantity} for item in val]
+        elif column.key == 'supplier':
+            if val:
+                result[column.key] = {'id': val.id, 'name': val.name, 'code': val.code}
+            else:
+                result[column.key] = None
+        elif column.key == 'user':
+            if val:
+                result[column.key] = {'id': val.id, 'username': val.username}
+            else:
+                result[column.key] = None
+        elif hasattr(val, 'isoformat'):
+            result[column.key] = val.isoformat()
+        else:
+            result[column.key] = val
+    
+    return result
 
 
 @router.get("/{purchase_id}", response_model=PurchaseResponse)
@@ -136,7 +162,7 @@ async def delete_purchase(
     return MessageResponse(message="Purchase deleted successfully")
 
 
-@router.post("/{purchase_id}/receive", response_model=PurchaseResponse)
+@router.post("/{purchase_id}/receive")
 async def receive_purchase(
     purchase_id: int,
     receive_data: ReceivePurchaseRequest,
@@ -159,4 +185,29 @@ async def receive_purchase(
             detail="Purchase not found"
         )
     
-    return purchase
+    # Return serialized dict instead of relying on response_model
+    from sqlalchemy import inspect
+    mapper = inspect(purchase)
+    result = {}
+    for column in mapper.attrs:
+        val = getattr(purchase, column.key)
+        if column.key == 'status':
+            result[column.key] = val.value if hasattr(val, 'value') else str(val)
+        elif column.key == 'items':
+            result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'received_quantity': item.received_quantity} for item in val]
+        elif column.key == 'supplier':
+            if val:
+                result[column.key] = {'id': val.id, 'name': val.name, 'code': val.code}
+            else:
+                result[column.key] = None
+        elif column.key == 'user':
+            if val:
+                result[column.key] = {'id': val.id, 'username': val.username}
+            else:
+                result[column.key] = None
+        elif hasattr(val, 'isoformat'):
+            result[column.key] = val.isoformat()
+        else:
+            result[column.key] = val
+    
+    return result

@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.schemas.common import MessageResponse, PaginationResponse
+from app.services.category_service import CategoryService
 from app.services.product_service import ProductService
 
 router = APIRouter()
@@ -64,6 +65,15 @@ async def create_product(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Product with this SKU already exists"
         )
+
+    if product_in.category_id is not None:
+        category_service = CategoryService(db)
+        category = await category_service.get_by_id(product_in.category_id)
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Category not found"
+            )
     
     product = await product_service.create(product_in)
     return product
@@ -108,6 +118,15 @@ async def update_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found"
         )
+
+    if product_in.category_id is not None:
+        category_service = CategoryService(db)
+        category = await category_service.get_by_id(product_in.category_id)
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Category not found"
+            )
     
     product = await product_service.update(product, product_in)
     return product
