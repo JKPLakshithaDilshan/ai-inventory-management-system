@@ -54,15 +54,23 @@ class StockLedgerService:
             tuple: (updated_product, updated_location, ledger_entry)
 
         Raises:
-            HTTPException: 404 if product/warehouse not found, 400 if insufficient stock
+            HTTPException: 404 if product/warehouse not found, 400 if
+            insufficient stock
         """
         # 1. Lock and fetch product (SELECT FOR UPDATE)
-        stmt = select(Product).where(Product.id == product_id).with_for_update()
+        stmt = (
+            select(Product)
+            .where(Product.id == product_id)
+            .with_for_update()
+        )
         result = await db.execute(stmt)
         product = result.scalar_one_or_none()
 
         if not product:
-            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Product {product_id} not found",
+            )
 
         # 2. Verify warehouse exists
         warehouse_stmt = select(Warehouse).where(Warehouse.id == warehouse_id)
@@ -70,9 +78,13 @@ class StockLedgerService:
         warehouse = warehouse_result.scalar_one_or_none()
 
         if not warehouse:
-            raise HTTPException(status_code=404, detail=f"Warehouse {warehouse_id} not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Warehouse {warehouse_id} not found",
+            )
 
-        # 3. Lock and fetch product location (SELECT FOR UPDATE), create if missing
+        # 3. Lock and fetch product location (SELECT FOR UPDATE).
+        # Create if missing.
         location_stmt = (
             select(ProductLocation)
             .where(
@@ -106,14 +118,18 @@ class StockLedgerService:
             if location_qty_after < 0:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Insufficient stock at warehouse {warehouse.name}. "
-                           f"Available: {location_qty_before}, Requested: {abs(qty_delta)}"
+                    detail=(
+                        f"Insufficient stock at warehouse {warehouse.name}. "
+                        f"Available: {location_qty_before}, Requested: {abs(qty_delta)}"
+                    ),
                 )
             if product_qty_after < 0:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Insufficient total stock for product {product.name}. "
-                           f"Available: {product_qty_before}, Requested: {abs(qty_delta)}"
+                    detail=(
+                        f"Insufficient total stock for product {product.name}. "
+                        f"Available: {product_qty_before}, Requested: {abs(qty_delta)}"
+                    ),
                 )
 
         # 6. Update quantities
@@ -166,8 +182,10 @@ class StockLedgerService:
             product_id: Filter by product
             warehouse_id: Filter by warehouse
             transaction_type: Filter by transaction type
-            reference_type: Filter by reference type (e.g., 'purchase', 'sale', 'stock_adjustment')
-            date_from: Filter entries created on or after this date (ISO format)
+            reference_type: Filter by reference type (e.g., 'purchase', 'sale',
+            'stock_adjustment')
+            date_from: Filter entries created on or after this date
+            (ISO format)
             date_to: Filter entries created on or before this date (ISO format)
             page: Page number (1-indexed)
             page_size: Items per page
@@ -220,7 +238,9 @@ class StockLedgerService:
         return list(entries), total
 
     @staticmethod
-    async def get_by_id(db: AsyncSession, ledger_id: int) -> Optional[StockLedger]:
+    async def get_by_id(
+        db: AsyncSession, ledger_id: int
+    ) -> Optional[StockLedger]:
         """
         Get a single stock ledger entry by ID.
 
