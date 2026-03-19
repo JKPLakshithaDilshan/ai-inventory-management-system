@@ -19,11 +19,29 @@ export const PERMISSIONS = {
     SUPPLIERS_VIEW: 'suppliers:view',
     SUPPLIERS_MANAGE: 'suppliers:manage',
 
+    WAREHOUSE_VIEW: 'warehouse:view',
+    WAREHOUSE_CREATE: 'warehouse:create',
+    WAREHOUSE_UPDATE: 'warehouse:update',
+    WAREHOUSE_DELETE: 'warehouse:delete',
+
+    CUSTOMER_VIEW: 'customer:view',
+    CUSTOMER_CREATE: 'customer:create',
+    CUSTOMER_UPDATE: 'customer:update',
+    CUSTOMER_DELETE: 'customer:delete',
+
     PURCHASES_VIEW: 'purchases:view',
     PURCHASES_MANAGE: 'purchases:manage',
 
     SALES_VIEW: 'sales:view',
     SALES_MANAGE: 'sales:manage',
+
+    STOCK_ADJUSTMENT_VIEW: 'stock_adjustment:view',
+    STOCK_ADJUSTMENT_CREATE: 'stock_adjustment:create',
+
+    STOCK_LEDGER_VIEW: 'stock_ledger:view',
+
+    REPORTS_VIEW: 'reports:view',
+    REPORTS_EXPORT: 'reports:export',
 
     ALERTS_VIEW: 'alerts:view',
     ALERTS_MANAGE: 'alerts:manage',
@@ -63,10 +81,20 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         PERMISSIONS.PRODUCTS_MANAGE,
         PERMISSIONS.SUPPLIERS_VIEW,
         PERMISSIONS.SUPPLIERS_MANAGE,
+        PERMISSIONS.WAREHOUSE_VIEW,
+        PERMISSIONS.WAREHOUSE_CREATE,
+        PERMISSIONS.WAREHOUSE_UPDATE,
+        PERMISSIONS.WAREHOUSE_DELETE,
+        PERMISSIONS.CUSTOMER_VIEW,
+        PERMISSIONS.CUSTOMER_CREATE,
+        PERMISSIONS.CUSTOMER_UPDATE,
+        PERMISSIONS.CUSTOMER_DELETE,
         PERMISSIONS.PURCHASES_VIEW,
         PERMISSIONS.PURCHASES_MANAGE,
         PERMISSIONS.SALES_VIEW,
         PERMISSIONS.SALES_MANAGE,
+        PERMISSIONS.STOCK_ADJUSTMENT_VIEW,
+        PERMISSIONS.STOCK_ADJUSTMENT_CREATE,
         PERMISSIONS.ALERTS_VIEW,
         PERMISSIONS.ALERTS_MANAGE,
         PERMISSIONS.ADMIN_AUDIT_VIEW,
@@ -80,10 +108,20 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         PERMISSIONS.PRODUCTS_MANAGE,
         PERMISSIONS.SUPPLIERS_VIEW,
         PERMISSIONS.SUPPLIERS_MANAGE,
+        PERMISSIONS.WAREHOUSE_VIEW,
+        PERMISSIONS.WAREHOUSE_CREATE,
+        PERMISSIONS.WAREHOUSE_UPDATE,
+        PERMISSIONS.WAREHOUSE_DELETE,
+        PERMISSIONS.CUSTOMER_VIEW,
+        PERMISSIONS.CUSTOMER_CREATE,
+        PERMISSIONS.CUSTOMER_UPDATE,
+        PERMISSIONS.CUSTOMER_DELETE,
         PERMISSIONS.PURCHASES_VIEW,
         PERMISSIONS.PURCHASES_MANAGE,
         PERMISSIONS.SALES_VIEW,
         PERMISSIONS.SALES_MANAGE,
+        PERMISSIONS.STOCK_ADJUSTMENT_VIEW,
+        PERMISSIONS.STOCK_ADJUSTMENT_CREATE,
         PERMISSIONS.ALERTS_VIEW,
         PERMISSIONS.ADMIN_AUDIT_VIEW,
     ],
@@ -93,8 +131,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         PERMISSIONS.DASHBOARD_VIEW,
         PERMISSIONS.PRODUCTS_VIEW,
         PERMISSIONS.SUPPLIERS_VIEW,
+        PERMISSIONS.WAREHOUSE_VIEW,
+        PERMISSIONS.CUSTOMER_VIEW,
         PERMISSIONS.PURCHASES_VIEW,
         PERMISSIONS.SALES_VIEW,
+        PERMISSIONS.STOCK_ADJUSTMENT_VIEW,
         PERMISSIONS.ALERTS_VIEW,
     ],
 
@@ -110,9 +151,7 @@ export interface User {
     name: string;
     email: string;
     role: Role;
-    role_id?: number;
-    role_name?: string;
-    permissions?: Permission[];
+    permissions: Permission[];
 }
 
 /**
@@ -120,14 +159,8 @@ export interface User {
  */
 export function hasPermission(user: User | null, permission: Permission): boolean {
     if (!user) return false;
-
-    // Prefer backend-derived permission list when available.
-    if (user.permissions && user.permissions.length > 0) {
-        return user.permissions.includes(permission);
-    }
-
-    const permissions = ROLE_PERMISSIONS[user.role];
-    return permissions.includes(permission);
+    if (user.role === ROLES.ADMIN) return true;
+    return user.permissions.includes(permission);
 }
 
 /**

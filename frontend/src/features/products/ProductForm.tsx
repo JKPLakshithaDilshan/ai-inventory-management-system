@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { productApi, type Category, type ProductCreateInput } from '@/services/products';
+import type { ProductCreateInput } from '@/services/products';
 
 const productSchema = z.object({
   sku: z.string().trim().min(1, 'SKU is required'),
@@ -61,7 +61,6 @@ export function ProductForm({
 }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema) as any,
@@ -99,21 +98,6 @@ export function ProductForm({
     });
     setSubmitError(null);
   }, [open, defaultValues, form]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const loadCategories = async () => {
-      try {
-        const response = await productApi.getCategories({ skip: 0, limit: 200 });
-        setCategories(response.items || []);
-      } catch {
-        setCategories([]);
-      }
-    };
-
-    loadCategories();
-  }, [open]);
 
   const handleSubmit = async (data: ProductFormValues) => {
     try {
@@ -213,22 +197,16 @@ export function ProductForm({
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>Category ID</FormLabel>
                     <FormControl>
-                      <select
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      <Input
+                        type="number"
+                        placeholder="Optional"
                         value={field.value ?? ''}
                         onChange={(event) => {
                           field.onChange(event.target.value === '' ? undefined : Number(event.target.value));
                         }}
-                      >
-                        <option value="">No category</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

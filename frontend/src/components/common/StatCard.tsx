@@ -18,15 +18,29 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
     const isPositiveTrend = trend && trend.value >= 0;
 
     return (
-        <Card className={cn('min-w-0 hover:shadow-md transition-shadow', className)}>
+        <Card
+            className={cn(
+                'group relative overflow-hidden border-border/60 bg-gradient-to-br from-card via-card to-primary/[0.04] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg',
+                className
+            )}
+        >
+            <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/10 blur-2xl transition-opacity duration-300 group-hover:opacity-90" />
             <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                    <div className="min-w-0 flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-5 text-muted-foreground break-words">
+                <div className="space-y-4">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                        <p className="min-w-0 break-normal text-xs font-semibold uppercase tracking-[0.02em] leading-tight text-muted-foreground/90 [word-break:normal] [overflow-wrap:normal] [hyphens:none]">
                             {title}
                         </p>
-                        <div className="flex items-baseline gap-2 min-w-0">
-                            <p className="text-2xl font-bold tracking-tight leading-none break-words">
+                        {Icon && (
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary shadow-sm">
+                                <Icon className="h-5 w-5" />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-1">
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold tracking-tight">
                                 {value}
                             </p>
                             {trend && (
@@ -43,16 +57,11 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
                             )}
                         </div>
                         {(description || trend?.label) && (
-                            <p className="text-xs leading-5 text-muted-foreground break-words">
+                            <p className="text-xs text-muted-foreground">
                                 {trend?.label || description}
                             </p>
                         )}
                     </div>
-                    {Icon && (
-                        <div className="shrink-0 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                            <Icon className="h-6 w-6 text-primary" />
-                        </div>
-                    )}
                 </div>
             </CardContent>
         </Card>

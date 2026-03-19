@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, check_permission
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.schemas.common import MessageResponse, PaginationResponse
-from app.services.category_service import CategoryService
 from app.services.product_service import ProductService
 
 router = APIRouter()
@@ -21,7 +21,7 @@ async def list_products(
     category_id: int = Query(None),
     stock_status: str = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("products:view"))
 ):
     """
     Retrieve products with pagination and filters.
@@ -51,7 +51,7 @@ async def list_products(
 async def create_product(
     product_in: ProductCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("products:manage"))
 ):
     """
     Create new product.
@@ -65,15 +65,6 @@ async def create_product(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Product with this SKU already exists"
         )
-
-    if product_in.category_id is not None:
-        category_service = CategoryService(db)
-        category = await category_service.get_by_id(product_in.category_id)
-        if not category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Category not found"
-            )
     
     product = await product_service.create(product_in)
     return product
@@ -83,7 +74,7 @@ async def create_product(
 async def get_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("products:view"))
 ):
     """
     Get product by ID.
@@ -105,7 +96,7 @@ async def update_product(
     product_id: int,
     product_in: ProductUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("products:manage"))
 ):
     """
     Update product.
@@ -118,15 +109,6 @@ async def update_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found"
         )
-
-    if product_in.category_id is not None:
-        category_service = CategoryService(db)
-        category = await category_service.get_by_id(product_in.category_id)
-        if not category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Category not found"
-            )
     
     product = await product_service.update(product, product_in)
     return product
@@ -136,7 +118,7 @@ async def update_product(
 async def delete_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("products:manage"))
 ):
     """
     Delete product.
@@ -150,14 +132,21 @@ async def delete_product(
             detail="Product not found"
         )
     
-    await product_service.delete(product)
+    try:
+        await product_service.delete(product)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete product because it is used in transactions or stock records"
+        )
+
     return MessageResponse(message="Product deleted successfully")
 
 
 @router.get("/low-stock/alerts", response_model=list[ProductResponse])
 async def get_low_stock_products(
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("products:view"))
 ):
     """
     Get products with low stock or out of stock.

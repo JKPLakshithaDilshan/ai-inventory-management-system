@@ -4,6 +4,13 @@
  */
 
 import { http } from './http';
+import type { PaginatedResponse } from '@/types/common';
+
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
 
 // Type from backend ProductResponse
 export interface Product {
@@ -20,14 +27,11 @@ export interface Product {
   unit: string;
   barcode?: string;
   image_url?: string;
-  stock_status: 'in_stock' | 'low_stock' | 'out_of_stock';
+  stock_status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+  is_active: boolean;
   created_at: string;
   updated_at: string;
-  category?: {
-    id: number;
-    name: string;
-    description?: string;
-  };
+  category?: Category;
 }
 
 export interface ProductCreateInput {
@@ -43,18 +47,82 @@ export interface ProductCreateInput {
   unit?: string;
   barcode?: string;
   image_url?: string;
+  is_active?: boolean;
 }
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
+export interface ProductUpdateInput extends Partial<ProductCreateInput> {}
 
 /**
- * Get all products with pagination
+ * Product API service methods
+ */
+export const productApi = {
+  /**
+   * Get all products with pagination
+   */
+  async list(params?: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    category_id?: number;
+    stock_status?: string;
+  }): Promise<PaginatedResponse<Product>> {
+    const query = new URLSearchParams();
+    
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    if (params?.search) query.append('search', params.search);
+    if (params?.category_id !== undefined) query.append('category_id', String(params.category_id));
+    if (params?.stock_status) query.append('stock_status', params.stock_status);
+
+    const url = query.toString() ? `/products?${query.toString()}` : '/products';
+    return http.get(url);
+  },
+
+  /**
+   * Get single product by ID
+   */
+  async getById(id: number): Promise<Product> {
+    return http.get(`/products/${id}`);
+  },
+
+  /**
+   * Create a new product
+   */
+  async create(data: ProductCreateInput): Promise<Product> {
+    return http.post('/products', data);
+  },
+
+  /**
+   * Update a product
+   */
+  async update(id: number, data: ProductUpdateInput): Promise<Product> {
+    return http.put(`/products/${id}`, data);
+  },
+
+  /**
+   * Delete a product
+   */
+  async delete(id: number): Promise<{ message: string }> {
+    return http.delete(`/products/${id}`);
+  },
+
+  /**
+   * Get all categories
+   */
+  async getCategories(): Promise<Category[]> {
+    return http.get('/categories');
+  },
+
+  /**
+   * Create a new category
+   */
+  async createCategory(data: { name: string; description?: string }): Promise<Category> {
+    return http.post('/categories', data);
+  },
+};
+
+/**
+ * Legacy function wrappers for backwards compatibility
  */
 export async function getProducts(
   skip = 0,
@@ -63,48 +131,21 @@ export async function getProducts(
   categoryId?: number,
   stockStatus?: string
 ): Promise<PaginatedResponse<Product>> {
-  const params = new URLSearchParams({
-    skip: String(skip),
-    limit: String(limit),
-    ...(search && { search }),
-    ...(categoryId && { category_id: String(categoryId) }),
-    ...(stockStatus && { stock_status: stockStatus }),
-  });
-
-  return http.get(`/products?${params}`, {
-    method: 'GET',
-  });
+  return productApi.list({ skip, limit, search, category_id: categoryId, stock_status: stockStatus });
 }
 
-/**
- * Get single product by ID
- */
 export async function getProduct(id: number): Promise<Product> {
-  return http.get(`/products/${id}`);
+  return productApi.getById(id);
 }
 
-/**
- * Create a new product
- */
-export async function createProduct(
-  data: ProductCreateInput
-): Promise<Product> {
-  return http.post(`/products`, data);
+export async function createProduct(data: ProductCreateInput): Promise<Product> {
+  return productApi.create(data);
 }
 
-/**
- * Update a product
- */
-export async function updateProduct(
-  id: number,
-  data: Partial<ProductCreateInput>
-): Promise<Product> {
-  return http.put(`/products/${id}`, data);
+export async function updateProduct(id: number, data: Partial<ProductCreateInput>): Promise<Product> {
+  return productApi.update(id, data);
 }
 
-/**
- * Delete a product
- */
 export async function deleteProduct(id: number): Promise<{ message: string }> {
-  return http.delete(`/products/${id}`);
+  return productApi.delete(id);
 }

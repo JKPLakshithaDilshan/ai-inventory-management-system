@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { PERMISSIONS, ROLES, type Permission, type Role, type User } from '@/lib/rbac';
-import { login as apiLogin, me as apiMe, logout as apiLogout } from '@/services/auth';
+import { ROLES, ROLE_PERMISSIONS, type Role, type User } from '@/lib/rbac';
+import { login as apiLogin, me as apiMe, logout as apiLogout, refreshToken as apiRefreshToken } from '@/services/auth';
 
 interface AuthState {
     // State
@@ -16,58 +16,49 @@ interface AuthState {
     bootstrap: () => Promise<void>;
     logout: () => void;
     clearError: () => void;
+    loginAsRole: (role: Role) => void; // Dev helper (dev only)
 }
 
-function normalizeRoleName(roleName: string | undefined): Role {
-    if (!roleName) return ROLES.VIEWER;
-    const upperRole = roleName.toUpperCase();
-    return (Object.values(ROLES).includes(upperRole as Role) ? upperRole : ROLES.VIEWER) as Role;
-}
+const DEV_MODE = import.meta.env.DEV;
 
-function buildUserFromBackend(userResponse: {
-    id: number;
-    email: string;
-    username: string;
-    full_name: string;
-    is_superuser: boolean;
-    role_id?: number;
-    role_name?: string;
-    role?: { id: number; role_name?: string; name?: string; permissions?: Array<{ name: string }> };
-    roles?: Array<{ id: number; role_name?: string; name?: string; permissions?: Array<{ name: string }> }>;
-}): User {
-    const roles = userResponse.roles || [];
-    const primaryRoleName =
-        userResponse.role_name ||
-        userResponse.role?.role_name ||
-        userResponse.role?.name ||
-        roles[0]?.role_name ||
-        roles[0]?.name;
-    const primaryRoleId = userResponse.role_id || userResponse.role?.id || roles[0]?.id;
-    const role = userResponse.is_superuser && !primaryRoleName ? ROLES.ADMIN : normalizeRoleName(primaryRoleName);
-
-    const permissions = new Set<Permission>();
-    if (userResponse.is_superuser) {
-        Object.values(PERMISSIONS).forEach((permission) => permissions.add(permission));
-    }
-    const backendRolesForPermissions = userResponse.role ? [userResponse.role, ...roles] : roles;
-    for (const backendRole of backendRolesForPermissions) {
-        for (const permission of backendRole.permissions || []) {
-            if (permission?.name) {
-                permissions.add(permission.name as Permission);
-            }
-        }
-    }
-
-    return {
-        id: String(userResponse.id),
-        name: userResponse.full_name || userResponse.username || userResponse.email,
-        email: userResponse.email,
-        role,
-        role_id: primaryRoleId,
-        role_name: primaryRoleName,
-        permissions: Array.from(permissions),
-    };
-}
+// Mock users for development only
+const MOCK_USERS: Record<Role, User> = {
+    [ROLES.ADMIN]: {
+        id: 'user_admin',
+        name: 'Admin User',
+        email: 'admin@inventory.app',
+        role: ROLES.ADMIN,
+        permissions: ROLE_PERMISSIONS[ROLES.ADMIN],
+    },
+    [ROLES.HR]: {
+        id: 'user_hr',
+        name: 'HR Manager',
+        email: 'hr@inventory.app',
+        role: ROLES.HR,
+        permissions: ROLE_PERMISSIONS[ROLES.HR],
+    },
+    [ROLES.MANAGER]: {
+        id: 'user_manager',
+        name: 'Inventory Manager',
+        email: 'manager@inventory.app',
+        role: ROLES.MANAGER,
+        permissions: ROLE_PERMISSIONS[ROLES.MANAGER],
+    },
+    [ROLES.STAFF]: {
+        id: 'user_staff',
+        name: 'Staff Member',
+        email: 'staff@inventory.app',
+        role: ROLES.STAFF,
+        permissions: ROLE_PERMISSIONS[ROLES.STAFF],
+    },
+    [ROLES.VIEWER]: {
+        id: 'user_viewer',
+        name: 'Viewer Only',
+        email: 'viewer@inventory.app',
+        role: ROLES.VIEWER,
+        permissions: ROLE_PERMISSIONS[ROLES.VIEWER],
+    },
+};
 
 export const useAuthStore = create<AuthState>()(
     persist(
@@ -92,8 +83,24 @@ export const useAuthStore = create<AuthState>()(
                     // Step 2: Fetch user info
                     const userResponse = await apiMe();
                     
-                    // Step 3: Transform backend user to frontend auth profile
-                    const user = buildUserFromBackend(userResponse);
+                    // Step 3: Transform backend user to frontend user
+                    const roles = userResponse.roles || [];
+                    let userRole: Role;
+                    
+                    // If user is superuser but has no roles, assign ADMIN
+                    if (userResponse.is_superuser && roles.length === 0) {
+                        userRole = ROLES.ADMIN;
+                    } else {
+                        userRole = (roles[0]?.name || ROLES.VIEWER) as Role;
+                    }
+                    
+                    const user: User = {
+                        id: String(userResponse.id),
+                        name: userResponse.full_name || userResponse.username || userResponse.email,
+                        email: userResponse.email,
+                        role: userRole,
+                        permissions: (userResponse.permissions || []).map((p) => p.name as any),
+                    };
 
                     set({
                         isAuthenticated: true,
@@ -132,7 +139,23 @@ export const useAuthStore = create<AuthState>()(
                     // Verify token by calling /me
                     const userResponse = await apiMe();
                     
-                    const user = buildUserFromBackend(userResponse);
+                    const roles = userResponse.roles || [];
+                    let userRole: Role;
+                    
+                    // If user is superuser but has no roles, assign ADMIN
+                    if (userResponse.is_superuser && roles.length === 0) {
+                        userRole = ROLES.ADMIN;
+                    } else {
+                        userRole = (roles[0]?.name || ROLES.VIEWER) as Role;
+                    }
+                    
+                    const user: User = {
+                        id: String(userResponse.id),
+                        name: userResponse.full_name || userResponse.username || userResponse.email,
+                        email: userResponse.email,
+                        role: userRole,
+                        permissions: (userResponse.permissions || []).map((p) => p.name as any),
+                    };
 
                     set({
                         isAuthenticated: true,
@@ -141,14 +164,35 @@ export const useAuthStore = create<AuthState>()(
                         loading: false,
                     });
                 } catch (error) {
-                    // Token invalid, clear everything
-                    apiLogout();
-                    set({
-                        isAuthenticated: false,
-                        user: null,
-                        token: null,
-                        loading: false,
-                    });
+                    // Try refresh flow before forcing logout.
+                    try {
+                        const refreshed = await apiRefreshToken();
+                        const userResponse = await apiMe();
+                        const roles = userResponse.roles || [];
+                        const userRole = (roles[0]?.name || ROLES.VIEWER) as Role;
+                        const user: User = {
+                            id: String(userResponse.id),
+                            name: userResponse.full_name || userResponse.username || userResponse.email,
+                            email: userResponse.email,
+                            role: userRole,
+                            permissions: (userResponse.permissions || []).map((p) => p.name as any),
+                        };
+
+                        set({
+                            isAuthenticated: true,
+                            user,
+                            token: refreshed.access_token,
+                            loading: false,
+                        });
+                    } catch {
+                        apiLogout();
+                        set({
+                            isAuthenticated: false,
+                            user: null,
+                            token: null,
+                            loading: false,
+                        });
+                    }
                 }
             },
 
@@ -166,6 +210,20 @@ export const useAuthStore = create<AuthState>()(
             // Clear error
             clearError: () => set({ error: null }),
 
+            // Dev helper: Login as a specific role (keep for settings page dev tools)
+            loginAsRole: (role: Role) => {
+                if (!DEV_MODE) {
+                    return;
+                }
+                const user = MOCK_USERS[role];
+                const mockToken = `mock-token-${role}-${Date.now()}`;
+                localStorage.setItem('access_token', mockToken);
+                set({
+                    isAuthenticated: true,
+                    user,
+                    token: mockToken,
+                });
+            },
         }),
         {
             name: 'auth-store',

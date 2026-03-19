@@ -46,6 +46,7 @@ class SaleItemResponse(SaleItemBase):
 class SaleBase(BaseModel):
     """Base sale schema."""
     warehouse_id: int
+    customer_id: Optional[int] = None
     sale_date: date
     customer_name: Optional[str] = None
     customer_email: Optional[EmailStr] = None
@@ -64,6 +65,7 @@ class SaleCreate(SaleBase):
 
 class SaleUpdate(BaseModel):
     """Schema for updating a sale."""
+    customer_id: Optional[int] = None
     sale_date: Optional[date] = None
     customer_name: Optional[str] = None
     customer_email: Optional[EmailStr] = None

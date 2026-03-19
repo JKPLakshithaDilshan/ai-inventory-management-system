@@ -8,9 +8,14 @@ import { PERMISSIONS } from '@/lib/rbac';
 
 // Lazy loading Feature Pages for code-splitting
 const LoginPage = lazy(() => import('@/features/auth/LoginPage').then(m => ({ default: m.LoginPage })));
+const ForgotPasswordPage = lazy(() => import('@/features/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ProductsPage = lazy(() => import('@/features/products/ProductsPage').then(m => ({ default: m.ProductsPage })));
 const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
+const WarehousesListPage = lazy(() => import('@/features/warehouses/WarehousesListPage').then(m => ({ default: m.WarehousesListPage })));
+const CustomersListPage = lazy(() => import('@/features/customers/CustomersListPage').then(m => ({ default: m.CustomersListPage })));
+const CustomerDetailsPage = lazy(() => import('@/features/customers/CustomerDetailsPage').then(m => ({ default: m.CustomerDetailsPage })));
 const PurchasesListPage = lazy(() => import('@/features/purchases/PurchasesListPage').then(m => ({ default: m.PurchasesPage })));
 const PurchaseDetailsPage = lazy(() => import('@/features/purchases/PurchaseDetailsPage').then(m => ({ default: m.PurchaseDetailsPage })));
 const PurchaseWizard = lazy(() => import('@/features/purchases/PurchaseWizard').then(m => ({ default: m.PurchaseWizard })));
@@ -20,6 +25,9 @@ const CreateSalePage = lazy(() => import('@/features/sales/CreateSalePage').then
 const SaleDetailsPage = lazy(() => import('@/features/sales/SaleDetailsPage').then(m => ({ default: m.SaleDetailsPage })));
 
 const StockLedgerPage = lazy(() => import('@/features/stock/StockLedgerPage').then(m => ({ default: m.StockLedgerPage })));
+const StockAdjustmentsPage = lazy(() => import('@/features/stock-adjustments/StockAdjustmentsPage').then(m => ({ default: m.StockAdjustmentsPage })));
+
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage'));
 
 const AlertsPage = lazy(() => import('@/features/alerts/AlertsPage').then(m => ({ default: m.AlertsPage })));
 const AIForecastPage = lazy(() => import('@/features/ai/AIForecastPage').then(m => ({ default: m.AIForecastPage })));
@@ -29,6 +37,7 @@ const UnauthorizedPage = lazy(() => import('@/features/auth/UnauthorizedPage').t
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 const UsersPage = lazy(() => import('@/features/users/UsersPage').then(m => ({ default: m.UsersPage })));
+const DebugAuthPage = lazy(() => import('@/features/debug/DebugAuthPage').then(m => ({ default: m.DebugAuthPage })));
 
 // Fallback skeleton loader while routes load
 const PageLoader = () => (
@@ -41,11 +50,14 @@ export function AppRouter() {
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>
+                <Route path="/debug-auth" element={<DebugAuthPage />} />
+
                 {/* Auth Routes */}
                 <Route element={<RequireGuest />}>
                     <Route element={<AuthLayout />}>
                         <Route path="/auth/login" element={<LoginPage />} />
-                        <Route path="/auth/forgot-password" element={<Navigate to="/auth/login" replace />} />
+                        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
                     </Route>
                 </Route>
 
@@ -57,6 +69,13 @@ export function AppRouter() {
 
                         <Route path="/products" element={<ProductsPage />} />
                         <Route path="/suppliers" element={<SuppliersPage />} />
+                        <Route element={<RequirePermission permission={PERMISSIONS.WAREHOUSE_VIEW} />}>
+                            <Route path="/warehouses" element={<WarehousesListPage />} />
+                        </Route>
+                        <Route element={<RequirePermission permission={PERMISSIONS.CUSTOMER_VIEW} />}>
+                            <Route path="/customers" element={<CustomersListPage />} />
+                            <Route path="/customers/:id" element={<CustomerDetailsPage />} />
+                        </Route>
                         <Route path="/purchases">
                             <Route index element={<PurchasesListPage />} />
                             <Route path="new" element={<PurchaseWizard />} />
@@ -69,6 +88,13 @@ export function AppRouter() {
                         </Route>
 
                         <Route path="/stock-ledger" element={<StockLedgerPage />} />
+                        <Route element={<RequirePermission permission={PERMISSIONS.STOCK_ADJUSTMENT_VIEW} />}>
+                            <Route path="/stock-adjustments" element={<StockAdjustmentsPage />} />
+                        </Route>
+
+                        <Route element={<RequirePermission permission={PERMISSIONS.REPORTS_VIEW} />}>
+                            <Route path="/reports" element={<ReportsPage />} />
+                        </Route>
 
                         <Route element={<RequirePermission permission={PERMISSIONS.ALERTS_VIEW} />}>
                             <Route path="/alerts" element={<AlertsPage />} />

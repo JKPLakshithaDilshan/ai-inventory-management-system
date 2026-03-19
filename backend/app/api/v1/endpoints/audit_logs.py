@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import check_permission
 from app.schemas.audit_log import AuditLogResponse
 from app.schemas.common import PaginationResponse
 from app.services.audit_service import AuditService
@@ -20,7 +20,7 @@ async def list_audit_logs(
     action: str = Query(None),
     resource_type: str = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("admin:audit:view"))
 ):
     """
     Retrieve audit logs with pagination and filters.
@@ -50,7 +50,7 @@ async def list_audit_logs(
 async def get_audit_log(
     log_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("admin:audit:view"))
 ):
     """
     Get audit log by ID.

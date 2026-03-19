@@ -50,6 +50,13 @@ from app.schemas.stock_ledger import (
     StockLedgerResponse,
     StockLedgerFilter
 )
+from app.schemas.stock_adjustment import (
+    StockAdjustmentBase,
+    StockAdjustmentCreate,
+    StockAdjustmentResponse,
+    StockAdjustmentCurrentStockResponse,
+    StockAdjustmentListFilters,
+)
 
 __all__ = [
     "UserCreate",
@@ -91,4 +98,9 @@ __all__ = [
     "StockLedgerCreate",
     "StockLedgerResponse",
     "StockLedgerFilter",
+        "StockAdjustmentBase",
+        "StockAdjustmentCreate",
+        "StockAdjustmentResponse",
+        "StockAdjustmentCurrentStockResponse",
+        "StockAdjustmentListFilters",
 ]

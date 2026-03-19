@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import check_permission
 from app.schemas.sale import SaleCreate, SaleUpdate, SaleResponse
 from app.schemas.common import MessageResponse, PaginationResponse
 from app.services.sale_service import SaleService
@@ -19,7 +19,7 @@ async def list_sales(
     status: str = Query(None),
     payment_status: str = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("sales:view"))
 ):
     """
     Retrieve sales with pagination and filters.
@@ -44,11 +44,11 @@ async def list_sales(
     )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
 async def create_sale(
     sale_in: SaleCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("sales:manage"))
 ):
     """
     Create new sale/invoice.
@@ -57,23 +57,7 @@ async def create_sale(
     
     try:
         sale = await sale_service.create(sale_in, current_user.id)
-        # Manual serialization to avoid Pydantic validation issues with nested relationships
-        from sqlalchemy import inspect
-        mapper = inspect(sale)
-        result = {}
-        for column in mapper.attrs:
-            val = getattr(sale, column.key)
-            if column.key == 'status':
-                result[column.key] = val.value if hasattr(val, 'value') else str(val)
-            elif column.key == 'payment_status':
-                result[column.key] = val.value if hasattr(val, 'value') else str(val)
-            elif column.key == 'items':
-                result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'discount_percent': getattr(item, 'discount_percent', 0)} for item in val]
-            elif hasattr(val, 'isoformat'):
-                result[column.key] = val.isoformat()
-            else:
-                result[column.key] = val
-        return result
+        return sale
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -85,7 +69,7 @@ async def create_sale(
 async def get_sale(
     sale_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("sales:view"))
 ):
     """
     Get sale by ID.
@@ -102,11 +86,11 @@ async def get_sale(
     return sale
 
 
-@router.post("/{sale_id}/complete")
+@router.post("/{sale_id}/complete", response_model=SaleResponse)
 async def complete_sale(
     sale_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("sales:manage"))
 ):
     """
     Complete a DRAFT sale and deduct stock.
@@ -121,23 +105,7 @@ async def complete_sale(
     
     try:
         sale = await sale_service.complete_sale(sale_id, current_user.id)
-        # Manual serialization to avoid Pydantic validation issues with nested relationships
-        from sqlalchemy import inspect
-        mapper = inspect(sale)
-        result = {}
-        for column in mapper.attrs:
-            val = getattr(sale, column.key)
-            if column.key == 'status':
-                result[column.key] = val.value if hasattr(val, 'value') else str(val)
-            elif column.key == 'payment_status':
-                result[column.key] = val.value if hasattr(val, 'value') else str(val)
-            elif column.key == 'items':
-                result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'discount_percent': getattr(item, 'discount_percent', 0)} for item in val]
-            elif hasattr(val, 'isoformat'):
-                result[column.key] = val.isoformat()
-            else:
-                result[column.key] = val
-        return result
+        return sale
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -150,7 +118,7 @@ async def update_sale(
     sale_id: int,
     sale_in: SaleUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("sales:manage"))
 ):
     """
     Update sale.
@@ -174,11 +142,22 @@ async def update_sale(
         )
 
 
+@router.patch("/{sale_id}", response_model=SaleResponse)
+async def patch_sale(
+    sale_id: int,
+    sale_in: SaleUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(check_permission("sales:manage"))
+):
+    """Partially update sale."""
+    return await update_sale(sale_id=sale_id, sale_in=sale_in, db=db, current_user=current_user)
+
+
 @router.delete("/{sale_id}", response_model=MessageResponse)
 async def delete_sale(
     sale_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("sales:manage"))
 ):
     """
     Delete sale (only drafts can be deleted).

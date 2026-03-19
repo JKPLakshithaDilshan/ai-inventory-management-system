@@ -5,6 +5,7 @@ import {
     Package,
     ShoppingCart,
     Receipt,
+    ClipboardList,
     AlertTriangle,
     LineChart,
     Users,
@@ -13,8 +14,10 @@ import {
     TrendingUp,
     BrainCircuit,
     Warehouse,
+    Building2,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,8 +51,12 @@ const navGroups: NavGroup[] = [
             { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', permission: PERMISSIONS.DASHBOARD_VIEW },
             { title: 'Products', icon: Package, href: '/products', permission: PERMISSIONS.PRODUCTS_VIEW },
             { title: 'Suppliers', icon: Warehouse, href: '/suppliers', permission: PERMISSIONS.SUPPLIERS_VIEW },
+            { title: 'Warehouses', icon: Building2, href: '/warehouses', permission: PERMISSIONS.WAREHOUSE_VIEW },
+            { title: 'Customers', icon: Users, href: '/customers', permission: PERMISSIONS.CUSTOMER_VIEW },
             { title: 'Purchases', icon: ShoppingCart, href: '/purchases', permission: PERMISSIONS.PURCHASES_VIEW },
             { title: 'Sales', icon: Receipt, href: '/sales', permission: PERMISSIONS.SALES_VIEW },
+            { title: 'Stock Adjustments', icon: ClipboardList, href: '/stock-adjustments', permission: PERMISSIONS.STOCK_ADJUSTMENT_VIEW },
+            { title: 'Reports', icon: BarChart3, href: '/reports', permission: PERMISSIONS.REPORTS_VIEW },
         ],
     },
     {

@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 interface RequestOptions extends RequestInit {
     data?: unknown;
     isFormData?: boolean;
+    skipAuth?: boolean;
 }
 
 class HttpClient {
@@ -76,6 +77,17 @@ class HttpClient {
     }
 
     /**
+     * Make HTTP PATCH request
+     */
+    async patch<T>(endpoint: string, data?: unknown, options?: RequestOptions): Promise<T> {
+        return this.request<T>(endpoint, {
+            ...options,
+            method: 'PATCH',
+            data,
+        });
+    }
+
+    /**
      * Make HTTP DELETE request
      */
     async delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
@@ -86,7 +98,7 @@ class HttpClient {
      * Main request method
      */
     private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-        const { data, headers: customHeaders, isFormData, ...restOptions } = options;
+        const { data, headers: customHeaders, isFormData, skipAuth, ...restOptions } = options;
 
         const headers = new Headers(customHeaders || {});
 
@@ -99,7 +111,7 @@ class HttpClient {
 
         // Add JWT token if available
         const token = this.getAuthToken();
-        if (token) {
+        if (token && !skipAuth && !headers.has('Authorization')) {
             headers.set('Authorization', `Bearer ${token}`);
         }
 

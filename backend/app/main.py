@@ -59,23 +59,23 @@ app = FastAPI(
 )
 
 
-# CORS middleware
-# Uses explicit, environment-aware origin lists from settings.
+# CORS Middleware - Allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
-    allow_methods=settings.CORS_ALLOW_METHODS,
-    allow_headers=settings.CORS_ALLOW_HEADERS,
-    expose_headers=settings.CORS_EXPOSE_HEADERS,
+    allow_origins=["*"],  # Allow all origins in development
+    allow_credentials=False,  # Must be False when using wildcard
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
-# Trusted host middleware
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=settings.TRUSTED_HOSTS,
-)
+# Trusted Host Middleware (production security)
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["*"]  # Configure with actual hosts in production
+    )
 
 
 # Exception Handlers
@@ -150,7 +150,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=settings.DEBUG,
-        log_level="info",
-        proxy_headers=settings.ENABLE_PROXY_HEADERS,
-        forwarded_allow_ips=settings.FORWARDED_ALLOW_IPS,
+        log_level="info"
     )

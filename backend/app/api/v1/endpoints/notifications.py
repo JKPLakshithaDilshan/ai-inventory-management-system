@@ -1,100 +1,68 @@
-"""Notification API endpoints."""
+"""Notifications endpoints."""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.user import User
-from app.schemas.notification import (
+from app.schemas.notifications import (
+    NotificationListResponse,
+    NotificationMarkReadResponse,
     NotificationResponse,
-    NotificationsListResponse,
-    MarkAllReadResponse,
 )
 from app.services.notification_service import NotificationService
 
 router = APIRouter()
 
 
-@router.get("", response_model=NotificationsListResponse)
+@router.get("", response_model=NotificationListResponse)
 async def list_notifications(
     limit: int = Query(20, ge=1, le=100),
-    unread_only: bool = Query(False),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
-    """List notifications for the current user."""
+    """List notifications for current user with server-side read state."""
     service = NotificationService(db)
+    await service.sync_for_user(user_id=current_user.id, source_limit=limit)
+    items, unread_count = await service.list_for_user(user_id=current_user.id, limit=limit)
 
-    try:
-        notifications, total, unread_count = await service.get_notifications(
-            user=current_user,
-            limit=limit,
-            unread_only=unread_only,
-        )
-
-        return NotificationsListResponse(
-            items=[
-                NotificationResponse(
-                    id=item.id,
-                    title=item.title,
-                    message=item.message,
-                    type=item.type,
-                    read=item.read,
-                    created_at=item.created_at.isoformat(),
-                    action_url=item.action_url,
-                )
-                for item in notifications
-            ],
-            total=total,
-            unread_count=unread_count,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading notifications: {str(e)}")
+    return NotificationListResponse(
+        items=[
+            NotificationResponse(
+                id=str(item.id),
+                title=item.title,
+                message=item.message,
+                type=item.type,
+                read=item.is_read,
+                created_at=item.created_at.isoformat(),
+                action_url=item.action_url,
+            )
+            for item in items
+        ],
+        unread_count=unread_count,
+    )
 
 
-@router.patch("/read-all", response_model=MarkAllReadResponse)
-async def mark_all_notifications_read(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Mark all notifications as read for current user."""
-    service = NotificationService(db)
-
-    try:
-        updated_count = await service.mark_all_as_read(user=current_user)
-        return MarkAllReadResponse(
-            message="All notifications marked as read",
-            updated_count=updated_count,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error marking all notifications as read: {str(e)}")
-
-
-@router.patch("/{notification_id}/read", response_model=NotificationResponse)
+@router.put("/{notification_id}/read", response_model=NotificationMarkReadResponse)
 async def mark_notification_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
-    """Mark a single notification as read."""
+    """Mark one notification as read."""
     service = NotificationService(db)
+    updated = await service.mark_read(user_id=current_user.id, notification_id=notification_id)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+    return NotificationMarkReadResponse(success=True)
 
-    try:
-        notification = await service.mark_as_read(user=current_user, notification_id=notification_id)
-        if notification is None:
-            raise HTTPException(status_code=404, detail="Notification not found")
 
-        return NotificationResponse(
-            id=notification.id,
-            title=notification.title,
-            message=notification.message,
-            type=notification.type,
-            read=notification.read,
-            created_at=notification.created_at.isoformat(),
-            action_url=notification.action_url,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error marking notification as read: {str(e)}")
+@router.delete("", response_model=NotificationMarkReadResponse)
+async def mark_all_notifications_read(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Mark all notifications as read for current user."""
+    service = NotificationService(db)
+    await service.mark_all_read(user_id=current_user.id)
+    return NotificationMarkReadResponse(success=True)

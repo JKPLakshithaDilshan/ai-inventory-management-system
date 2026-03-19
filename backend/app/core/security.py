@@ -1,6 +1,6 @@
 """Security utilities for authentication and authorization."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -57,25 +57,14 @@ def create_access_token(
     Returns:
         str: Encoded JWT token
     """
-    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = now + expires_delta
+        expire = datetime.utcnow() + expires_delta
     else:
-        expire = now + timedelta(
+        expire = datetime.utcnow() + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-
-    to_encode = {
-        "exp": expire,
-        "sub": str(subject),
-        "type": "access",
-        "iat": now,
-    }
-    if settings.JWT_ISSUER:
-        to_encode["iss"] = settings.JWT_ISSUER
-    if settings.JWT_AUDIENCE:
-        to_encode["aud"] = settings.JWT_AUDIENCE
-
+    
+    to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -89,21 +78,10 @@ def create_refresh_token(subject: Union[str, Any]) -> str:
     Returns:
         str: Encoded JWT refresh token
     """
-    now = datetime.now(timezone.utc)
     expires_delta = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    expire = now + expires_delta
-
-    to_encode = {
-        "exp": expire,
-        "sub": str(subject),
-        "type": "refresh",
-        "iat": now,
-    }
-    if settings.JWT_ISSUER:
-        to_encode["iss"] = settings.JWT_ISSUER
-    if settings.JWT_AUDIENCE:
-        to_encode["aud"] = settings.JWT_AUDIENCE
-
+    expire = datetime.utcnow() + expires_delta
+    
+    to_encode = {"exp": expire, "sub": str(subject), "type": "refresh"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -118,15 +96,11 @@ def decode_token(token: str) -> Optional[dict]:
         Optional[dict]: Decoded token payload or None if invalid
     """
     try:
-        decode_options: dict[str, Any] = {
-            "algorithms": [settings.ALGORITHM],
-        }
-        if settings.JWT_AUDIENCE:
-            decode_options["audience"] = settings.JWT_AUDIENCE
-        if settings.JWT_ISSUER:
-            decode_options["issuer"] = settings.JWT_ISSUER
-
-        payload = jwt.decode(token, settings.SECRET_KEY, **decode_options)
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
         return payload
     except JWTError:
         return None
@@ -189,6 +163,38 @@ async def get_current_user(
     return user
 
 
+async def get_current_refresh_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Get current authenticated user from refresh token."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    payload = decode_token(token)
+    if payload is None:
+        raise credentials_exception
+
+    user_id: str = payload.get("sub")
+    token_type: str = payload.get("type")
+
+    if user_id is None or token_type != "refresh":
+        raise credentials_exception
+
+    from app.services.user_service import UserService
+
+    user_service = UserService(db)
+    user = await user_service.get_by_id(int(user_id))
+
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    return user
+
+
 async def get_current_active_superuser(
     current_user: Any = Depends(get_current_user),
 ) -> Any:
@@ -237,16 +243,16 @@ def check_permission(required_permission: str):
             pass
     """
     async def permission_checker(current_user: Any = Depends(get_current_user)) -> Any:
-        # Check if user has the required permission
+        # Superuser or ADMIN role always bypasses checks.
+        if current_user.is_superuser or any((role.name or "").upper() == "ADMIN" for role in current_user.roles):
+            return current_user
+
         if not hasattr(current_user, 'permissions'):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User has no permissions"
             )
-        
-        if current_user.is_superuser:
-            return current_user
-        
+
         user_permissions = [p.name for p in current_user.permissions]
         if required_permission not in user_permissions:
             raise HTTPException(

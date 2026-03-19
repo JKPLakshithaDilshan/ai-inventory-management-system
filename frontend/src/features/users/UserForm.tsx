@@ -1,19 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { createUser, updateUser, type User, type UserCreateInput } from '@/services/users';
+import { createUser, getRoles, updateUser, type Role, type User, type UserCreateInput } from '@/services/users';
 
 interface UserFormProps {
     user?: User | null;
     onSuccess?: () => void;
+    onCancel?: () => void;
 }
 
-export function UserForm({ user, onSuccess }: UserFormProps) {
+export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [isLoadingRoles, setIsLoadingRoles] = useState(false);
     const [formData, setFormData] = useState({
         email: user?.email || '',
         username: user?.username || '',
@@ -21,8 +25,38 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         password: '',
         phone: user?.phone || '',
         is_active: user?.is_active ?? true,
+        role_id: user?.roles?.[0]?.id?.toString() || '',
     });
     const { toast } = useToast();
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadRoles = async () => {
+            setIsLoadingRoles(true);
+            try {
+                const data = await getRoles();
+                if (mounted) {
+                    setRoles(data || []);
+                }
+            } catch {
+                toast({
+                    title: 'Error',
+                    description: 'Failed to load roles',
+                    variant: 'destructive',
+                });
+            } finally {
+                if (mounted) {
+                    setIsLoadingRoles(false);
+                }
+            }
+        };
+
+        loadRoles();
+        return () => {
+            mounted = false;
+        };
+    }, [toast]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -37,6 +71,16 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         setIsLoading(true);
 
         try {
+            if (!formData.role_id) {
+                toast({
+                    title: 'Error',
+                    description: 'Role is required',
+                    variant: 'destructive',
+                });
+                setIsLoading(false);
+                return;
+            }
+
             if (user) {
                 // Update user
                 const updateData: any = {
@@ -45,6 +89,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
                     full_name: formData.full_name,
                     phone: formData.phone || undefined,
                     is_active: formData.is_active,
+                    role_ids: formData.role_id ? [Number(formData.role_id)] : [],
                 };
                 if (formData.password) {
                     updateData.password = formData.password;
@@ -65,7 +110,16 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
                     setIsLoading(false);
                     return;
                 }
-                await createUser(formData as UserCreateInput);
+                const payload: UserCreateInput = {
+                    email: formData.email,
+                    username: formData.username,
+                    full_name: formData.full_name,
+                    password: formData.password,
+                    phone: formData.phone || undefined,
+                    is_active: formData.is_active,
+                    role_ids: formData.role_id ? [Number(formData.role_id)] : [],
+                };
+                await createUser(payload);
                 toast({
                     title: 'Success',
                     description: 'User created successfully',
@@ -137,6 +191,26 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             </div>
 
             <div>
+                <Label htmlFor="role_id">Role</Label>
+                <Select
+                    value={formData.role_id}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, role_id: value }))}
+                    disabled={isLoadingRoles || isLoading}
+                >
+                    <SelectTrigger id="role_id" className="mt-1">
+                        <SelectValue placeholder={isLoadingRoles ? 'Loading roles...' : 'Select a role'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {roles.map((role) => (
+                            <SelectItem key={role.id} value={String(role.id)}>
+                                {role.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div>
                 <Label htmlFor="password">
                     {user ? 'Password (Leave blank to keep current)' : 'Password'}
                 </Label>
@@ -168,7 +242,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             </div>
 
             <div className="flex gap-2 justify-end">
-                <Button variant="outline" type="button" disabled={isLoading}>
+                <Button variant="outline" type="button" disabled={isLoading} onClick={onCancel}>
                     Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>

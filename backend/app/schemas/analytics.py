@@ -9,17 +9,13 @@ class ReorderSuggestion(BaseModel):
     product_id: int
     product_sku: str
     product_name: str
-    warehouse_id: Optional[int] = None
-    warehouse_name: Optional[str] = None
     current_stock: int
     reorder_level: int
     suggested_order_qty: int
     avg_daily_sales: float
     estimated_lead_time_days: int
     days_until_stockout: float
-    stockout_risk_score: float = Field(..., ge=0.0, le=100.0)
     urgency: str  # critical, high, medium, low
-    recommendation_reason: str
     supplier_id: Optional[int] = None
     supplier_name: Optional[str] = None
     
@@ -86,40 +82,4 @@ class SlowMovingStockResponse(BaseModel):
     total_stock_value: float
     days_analyzed: int
     
-    model_config = ConfigDict(from_attributes=True)
-
-
-class InventoryAlert(BaseModel):
-    """Schema for a single inventory alert."""
-    alert_id: str
-    alert_type: str  # low_stock, out_of_stock, overstock, demand_spike_risk, reorder_recommended
-    severity: str  # critical, high, medium, low
-    title: str
-    message: str
-    product_id: int
-    product_sku: str
-    product_name: str
-    warehouse_id: Optional[int] = None
-    warehouse_name: Optional[str] = None
-    current_stock: int
-    reorder_level: int
-    suggested_order_qty: Optional[int] = None
-    stockout_risk_score: Optional[float] = Field(default=None, ge=0.0, le=100.0)
-    supplier_id: Optional[int] = None
-    supplier_name: Optional[str] = None
-    detected_at: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class InventoryAlertsResponse(BaseModel):
-    """Response schema for inventory alerts endpoint."""
-    alerts: list[InventoryAlert]
-    total_count: int
-    critical_count: int
-    high_count: int
-    medium_count: int
-    low_count: int
-    generated_at: str
-
     model_config = ConfigDict(from_attributes=True)

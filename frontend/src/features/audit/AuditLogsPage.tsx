@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Search, Filter, Eye } from 'lucide-react';
+import { Search, Filter, Eye, AlertCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,10 @@ import {
     getActionColor,
     formatJSON,
     filterLogs,
+    getUserName,
+    getUserRole,
+    getEntityName,
+    capitalizeWords,
 } from './audit.utils';
 
 export default function AuditLogsPage() {
@@ -41,10 +45,11 @@ export default function AuditLogsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedModule, setSelectedModule] = useState<string>('all');
+    const [selectedResourceType, setSelectedResourceType] = useState<string>('all');
     const [selectedAction, setSelectedAction] = useState<string>('all');
     const [selectedDateRange, setSelectedDateRange] = useState<'today' | '7days' | '30days' | 'all'>('7days');
 
@@ -52,9 +57,16 @@ export default function AuditLogsPage() {
     useEffect(() => {
         const fetchLogs = async () => {
             setIsLoading(true);
-            const data = await getAuditLogs();
-            setLogs(data);
-            setIsLoading(false);
+            setError(null);
+            try {
+                const response = await getAuditLogs({ limit: 100 });
+                setLogs(response.items);
+            } catch (err) {
+                console.error('Failed to fetch audit logs:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load audit logs');
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         fetchLogs();
@@ -64,16 +76,16 @@ export default function AuditLogsPage() {
     useEffect(() => {
         const filtered = filterLogs(logs, {
             search: searchQuery,
-            module: selectedModule === 'all' ? undefined : selectedModule,
+            resource_type: selectedResourceType === 'all' ? undefined : selectedResourceType,
             action: selectedAction === 'all' ? undefined : selectedAction,
             dateRange: selectedDateRange,
         });
         setFilteredLogs(filtered);
-    }, [logs, searchQuery, selectedModule, selectedAction, selectedDateRange]);
+    }, [logs, searchQuery, selectedResourceType, selectedAction, selectedDateRange]);
 
     const handleClearFilters = () => {
         setSearchQuery('');
-        setSelectedModule('all');
+        setSelectedResourceType('all');
         setSelectedAction('all');
         setSelectedDateRange('7days');
     };
@@ -81,8 +93,8 @@ export default function AuditLogsPage() {
     const grouped = groupByDate(filteredLogs);
     const sortedDates = getSortedDateKeys(grouped);
 
-    // Get unique modules and actions
-    const modules = Array.from(new Set(logs.map(log => log.module))).sort();
+    // Get unique resource types and actions
+    const resourceTypes = Array.from(new Set(logs.map(log => log.resource_type))).sort();
     const actions = Array.from(new Set(logs.map(log => log.action))).sort();
 
     return (
@@ -101,7 +113,7 @@ export default function AuditLogsPage() {
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by entity, description, or actor..."
+                                    placeholder="Search by entity, description, or user..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-9"
@@ -111,15 +123,15 @@ export default function AuditLogsPage() {
 
                         {/* Dropdowns */}
                         <div className="flex gap-2 flex-wrap">
-                            <Select value={selectedModule} onValueChange={setSelectedModule}>
+                            <Select value={selectedResourceType} onValueChange={setSelectedResourceType}>
                                 <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="All Modules" />
+                                    <SelectValue placeholder="All Resource Types" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Modules</SelectItem>
-                                    {modules.map(module => (
-                                        <SelectItem key={module} value={module}>
-                                            {module}
+                                    <SelectItem value="all">All Resource Types</SelectItem>
+                                    {resourceTypes.map(type => (
+                                        <SelectItem key={type} value={type}>
+                                            {capitalizeWords(type)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -133,7 +145,7 @@ export default function AuditLogsPage() {
                                     <SelectItem value="all">All Actions</SelectItem>
                                     {actions.map(action => (
                                         <SelectItem key={action} value={action}>
-                                            {action}
+                                            {capitalizeWords(action)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -178,13 +190,24 @@ export default function AuditLogsPage() {
                                 </div>
                             ))}
                         </div>
+                    ) : error ? (
+                        <div className="flex items-center justify-center h-[400px] text-center">
+                            <div>
+                                <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                                <h3 className="font-semibold text-lg mb-1">Failed to load audit logs</h3>
+                                <p className="text-sm text-muted-foreground">{error}</p>
+                            </div>
+                        </div>
                     ) : filteredLogs.length === 0 ? (
                         <div className="flex items-center justify-center h-[400px] text-center">
                             <div>
                                 <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <h3 className="font-semibold text-lg mb-1">No audit logs found</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Try adjusting your filters
+                                    {logs.length === 0 
+                                        ? 'No audit logs have been recorded yet'
+                                        : 'Try adjusting your filters'
+                                    }
                                 </p>
                             </div>
                         </div>
@@ -203,70 +226,78 @@ export default function AuditLogsPage() {
 
                                     {/* Logs */}
                                     <div className="space-y-3 ml-6 relative before:absolute before:left-[-24px] before:top-0 before:bottom-0 before:w-0.5 before:bg-border">
-                                        {grouped[dateStr]?.map((log) => (
-                                            <div
-                                                key={log.id}
-                                                className="relative group"
-                                            >
-                                                {/* Timeline dot */}
-                                                <div className="absolute -left-[34px] top-3 w-3 h-3 rounded-full bg-primary border-2 border-background" />
+                                        {grouped[dateStr]?.map((log) => {
+                                            const userName = getUserName(log);
+                                            const userRole = getUserRole(log);
+                                            const entityName = getEntityName(log);
 
-                                                {/* Log entry card */}
-                                                <Card className="p-4 hover:shadow-md transition-shadow">
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div className="flex-1 space-y-2">
-                                                            {/* Top Row: Action badge, Module pill, Time */}
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <Badge
-                                                                    className={`${getActionColor(log.action)} border`}
-                                                                    variant="outline"
-                                                                >
-                                                                    {log.action}
-                                                                </Badge>
-                                                                <Badge variant="secondary">
-                                                                    {log.module}
-                                                                </Badge>
-                                                                <span className="text-xs text-muted-foreground ml-auto">
-                                                                    {formatTime(log.timestamp)}
-                                                                </span>
-                                                            </div>
+                                            return (
+                                                <div
+                                                    key={log.id}
+                                                    className="relative group"
+                                                >
+                                                    {/* Timeline dot */}
+                                                    <div className="absolute -left-[34px] top-3 w-3 h-3 rounded-full bg-primary border-2 border-background" />
 
-                                                            {/* Actor info and description */}
-                                                            <div className="space-y-1">
-                                                                <p className="text-sm font-medium">
-                                                                    {log.entityName}
-                                                                </p>
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    {log.description}
-                                                                </p>
-                                                                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                                                                    <span className="font-medium text-foreground">
-                                                                        {log.actorName}
-                                                                    </span>
-                                                                    <span>•</span>
-                                                                    <Badge variant="outline" className="text-xs">
-                                                                        {log.actorRole}
+                                                    {/* Log entry card */}
+                                                    <Card className="p-4 hover:shadow-md transition-shadow">
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div className="flex-1 space-y-2">
+                                                                {/* Top Row: Action badge, Resource Type pill, Time */}
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <Badge
+                                                                        className={`${getActionColor(log.action)} border`}
+                                                                        variant="outline"
+                                                                    >
+                                                                        {capitalizeWords(log.action)}
                                                                     </Badge>
+                                                                    <Badge variant="secondary">
+                                                                        {capitalizeWords(log.resource_type)}
+                                                                    </Badge>
+                                                                    <span className="text-xs text-muted-foreground ml-auto">
+                                                                        {formatTime(log.created_at)}
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Entity info and description */}
+                                                                <div className="space-y-1">
+                                                                    <p className="text-sm font-medium">
+                                                                        {entityName}
+                                                                    </p>
+                                                                    {log.resource_id && (
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            ID: {log.resource_id}
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                                                                        <span className="font-medium text-foreground">
+                                                                            {userName}
+                                                                        </span>
+                                                                        <span>•</span>
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            {userRole}
+                                                                        </Badge>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
 
-                                                        {/* View Details Button */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setSelectedLog(log);
-                                                                setIsDetailsOpen(true);
-                                                            }}
-                                                            className="flex-shrink-0"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </Card>
-                                            </div>
-                                        ))}
+                                                            {/* View Details Button */}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setSelectedLog(log);
+                                                                    setIsDetailsOpen(true);
+                                                                }}
+                                                                className="flex-shrink-0"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </Card>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
@@ -295,15 +326,15 @@ export default function AuditLogsPage() {
                                             Action
                                         </p>
                                         <Badge className={`${getActionColor(selectedLog.action)} border mt-1`}>
-                                            {selectedLog.action}
+                                            {capitalizeWords(selectedLog.action)}
                                         </Badge>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-muted-foreground uppercase">
-                                            Module
+                                            Resource Type
                                         </p>
                                         <Badge variant="secondary" className="mt-1">
-                                            {selectedLog.module}
+                                            {capitalizeWords(selectedLog.resource_type)}
                                         </Badge>
                                     </div>
                                     <div>
@@ -311,86 +342,104 @@ export default function AuditLogsPage() {
                                             Timestamp
                                         </p>
                                         <p className="text-sm mt-1">
-                                            {format(new Date(selectedLog.timestamp), 'PPpp')}
+                                            {format(new Date(selectedLog.created_at), 'PPpp')}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-muted-foreground uppercase">
-                                            Severity
+                                            Resource ID
                                         </p>
-                                        <Badge
-                                            variant={
-                                                selectedLog.severity === 'high'
-                                                    ? 'destructive'
-                                                    : selectedLog.severity === 'medium'
-                                                      ? 'secondary'
-                                                      : 'outline'
-                                            }
-                                            className="mt-1"
-                                        >
-                                            {selectedLog.severity}
-                                        </Badge>
+                                        <p className="text-sm mt-1">
+                                            {selectedLog.resource_id || 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     <div>
                                         <p className="text-xs font-semibold text-muted-foreground uppercase">
-                                            Actor
+                                            User
                                         </p>
-                                        <p className="text-sm mt-1">{selectedLog.actorName}</p>
+                                        <p className="text-sm mt-1">{getUserName(selectedLog)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-muted-foreground uppercase">
                                             Role
                                         </p>
-                                        <p className="text-sm mt-1">{selectedLog.actorRole}</p>
+                                        <p className="text-sm mt-1">{getUserRole(selectedLog)}</p>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 pt-2">
-                                    <div>
-                                        <p className="text-xs font-semibold text-muted-foreground uppercase">
-                                            Entity Type
-                                        </p>
-                                        <p className="text-sm mt-1">{selectedLog.entityType}</p>
+                                {selectedLog.user && (
+                                    <div className="grid grid-cols-2 gap-4 pt-2">
+                                        <div>
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                Username
+                                            </p>
+                                            <p className="text-sm mt-1">{selectedLog.user.username}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                Email
+                                            </p>
+                                            <p className="text-sm mt-1">{selectedLog.user.email}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-muted-foreground uppercase">
-                                            Entity Name
-                                        </p>
-                                        <p className="text-sm mt-1">{selectedLog.entityName}</p>
-                                    </div>
-                                </div>
+                                )}
 
-                                <div className="pt-2">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase">
-                                        Description
-                                    </p>
-                                    <p className="text-sm mt-1">{selectedLog.description}</p>
-                                </div>
+                                {selectedLog.description && (
+                                    <div className="pt-2">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                            Description
+                                        </p>
+                                        <p className="text-sm mt-1">{selectedLog.description}</p>
+                                    </div>
+                                )}
+
+                                {(selectedLog.ip_address || selectedLog.user_agent) && (
+                                    <div className="grid grid-cols-2 gap-4 pt-2">
+                                        {selectedLog.ip_address && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                    IP Address
+                                                </p>
+                                                <p className="text-sm mt-1">{selectedLog.ip_address}</p>
+                                            </div>
+                                        )}
+                                        {selectedLog.user_agent && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                    User Agent
+                                                </p>
+                                                <p className="text-sm mt-1 truncate" title={selectedLog.user_agent}>
+                                                    {selectedLog.user_agent}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Before/After JSON */}
-                            {(selectedLog.before || selectedLog.after) && (
+                            {(selectedLog.old_values || selectedLog.new_values) && (
                                 <div className="grid grid-cols-2 gap-4">
-                                    {selectedLog.before && (
+                                    {selectedLog.old_values && (
                                         <div>
                                             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                                                Before
+                                                Old Values
                                             </p>
                                             <pre className="bg-muted rounded p-3 text-xs overflow-x-auto max-h-[200px] overflow-y-auto">
-                                                {formatJSON(selectedLog.before)}
+                                                {formatJSON(selectedLog.old_values)}
                                             </pre>
                                         </div>
                                     )}
-                                    {selectedLog.after && (
+                                    {selectedLog.new_values && (
                                         <div>
                                             <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                                                After
+                                                New Values
                                             </p>
                                             <pre className="bg-muted rounded p-3 text-xs overflow-x-auto max-h-[200px] overflow-y-auto">
-                                                {formatJSON(selectedLog.after)}
+                                                {formatJSON(selectedLog.new_values)}
                                             </pre>
                                         </div>
                                     )}

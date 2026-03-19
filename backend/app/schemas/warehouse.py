@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from pydantic import ConfigDict
 
 
 class WarehouseBase(BaseModel):
@@ -11,6 +12,7 @@ class WarehouseBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     address: Optional[str] = None
     city: Optional[str] = None
+    contact_person: Optional[str] = Field(None, max_length=255)
     state: Optional[str] = None
     country: Optional[str] = None
     postal_code: Optional[str] = None
@@ -30,6 +32,7 @@ class WarehouseUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     address: Optional[str] = None
     city: Optional[str] = None
+    contact_person: Optional[str] = Field(None, max_length=255)
     state: Optional[str] = None
     country: Optional[str] = None
     postal_code: Optional[str] = None
@@ -44,5 +47,4 @@ class WarehouseResponse(WarehouseBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

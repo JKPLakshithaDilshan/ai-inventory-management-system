@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sale import Sale, SaleItem, SaleStatus
+from app.models.customer import Customer
 from app.models.stock_ledger import StockTransactionType
 from app.schemas.sale import SaleCreate, SaleUpdate
 from app.services.base_service import BaseService
@@ -43,6 +44,11 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
         Draft sales do NOT deduct stock.
         Use complete_sale() to finalize and deduct stock.
         """
+        if obj_in.customer_id is not None:
+            customer = await self.db.get(Customer, obj_in.customer_id)
+            if not customer:
+                raise ValueError(f"Customer {obj_in.customer_id} not found")
+
         # Generate invoice number
         invoice_number = await self.generate_invoice_number()
         
@@ -141,6 +147,11 @@ class SaleService(BaseService[Sale, SaleCreate, SaleUpdate]):
         if db_obj.status == SaleStatus.COMPLETED and obj_in.items is not None:
             raise ValueError("Cannot update items of a completed sale")
         
+        if obj_in.customer_id is not None:
+            customer = await self.db.get(Customer, obj_in.customer_id)
+            if not customer:
+                raise ValueError(f"Customer {obj_in.customer_id} not found")
+
         # Update basic fields
         obj_data = obj_in.model_dump(exclude_unset=True, exclude={'items'})
         for field, value in obj_data.items():

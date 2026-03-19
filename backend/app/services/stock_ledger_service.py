@@ -1,9 +1,7 @@
 """Stock Ledger Service - Centralized stock mutation gateway."""
 
-from datetime import datetime
 from typing import Optional
 from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
@@ -156,9 +154,8 @@ class StockLedgerService:
         warehouse_id: Optional[int] = None,
         transaction_type: Optional[StockTransactionType] = None,
         reference_type: Optional[str] = None,
-        reference_id: Optional[int] = None,
-        date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
         page: int = 1,
         page_size: int = 50
     ) -> tuple[list[StockLedger], int]:
@@ -170,20 +167,18 @@ class StockLedgerService:
             product_id: Filter by product
             warehouse_id: Filter by warehouse
             transaction_type: Filter by transaction type
-            reference_type: Filter by reference type
-            reference_id: Filter by reference id
-            date_from: Filter by created_at >= date_from
-            date_to: Filter by created_at <= date_to
+            reference_type: Filter by reference type (e.g., 'purchase', 'sale', 'stock_adjustment')
+            date_from: Filter entries created on or after this date (ISO format)
+            date_to: Filter entries created on or before this date (ISO format)
             page: Page number (1-indexed)
             page_size: Items per page
             
         Returns:
             tuple: (list of ledger entries, total count)
         """
-        query = select(StockLedger).options(
-            selectinload(StockLedger.product),
-            selectinload(StockLedger.warehouse),
-        )
+        from datetime import datetime
+        
+        query = select(StockLedger)
         
         # Apply filters
         if product_id:
@@ -194,12 +189,18 @@ class StockLedgerService:
             query = query.where(StockLedger.type == transaction_type)
         if reference_type:
             query = query.where(StockLedger.reference_type == reference_type)
-        if reference_id:
-            query = query.where(StockLedger.reference_id == reference_id)
         if date_from:
-            query = query.where(StockLedger.created_at >= date_from)
+            try:
+                parsed_date_from = datetime.fromisoformat(date_from)
+                query = query.where(StockLedger.created_at >= parsed_date_from)
+            except ValueError:
+                pass  # Silently ignore invalid date format
         if date_to:
-            query = query.where(StockLedger.created_at <= date_to)
+            try:
+                parsed_date_to = datetime.fromisoformat(date_to)
+                query = query.where(StockLedger.created_at <= parsed_date_to)
+            except ValueError:
+                pass  # Silently ignore invalid date format
         
         # Get total count
         count_query = select(func.count()).select_from(query.subquery())
@@ -218,17 +219,19 @@ class StockLedgerService:
         entries = result.scalars().all()
         
         return list(entries), total
-
+    
     @staticmethod
-    async def get_entry_by_id(db: AsyncSession, entry_id: int) -> Optional[StockLedger]:
-        """Get a single stock ledger entry by ID with related product and warehouse."""
-        query = (
-            select(StockLedger)
-            .where(StockLedger.id == entry_id)
-            .options(
-                selectinload(StockLedger.product),
-                selectinload(StockLedger.warehouse),
-            )
-        )
+    async def get_by_id(db: AsyncSession, ledger_id: int) -> Optional[StockLedger]:
+        """
+        Get a single stock ledger entry by ID.
+        
+        Args:
+            db: Database session
+            ledger_id: Ledger entry ID
+            
+        Returns:
+            StockLedger entry or None if not found
+        """
+        query = select(StockLedger).where(StockLedger.id == ledger_id)
         result = await db.execute(query)
         return result.scalar_one_or_none()

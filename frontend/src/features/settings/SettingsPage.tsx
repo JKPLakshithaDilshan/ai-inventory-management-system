@@ -4,12 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { ROLES, getRoleDisplayName, ROLE_PERMISSIONS, type Role } from '@/lib/rbac';
+import { ROLES, getRoleDisplayName, type Role } from '@/lib/rbac';
 import { LogOut, Sparkles } from 'lucide-react';
 
 export function SettingsPage() {
     const { user, loginAsRole, logout } = useAuthStore();
     const [showDevTools, setShowDevTools] = useState(false);
+    const isDev = import.meta.env.DEV;
 
     if (!user) {
         return (
@@ -19,7 +20,7 @@ export function SettingsPage() {
         );
     }
 
-    const currentPermissions = ROLE_PERMISSIONS[user.role];
+    const currentPermissions = user.permissions || [];
 
     return (
         <div className="flex flex-col gap-6">
@@ -82,6 +83,7 @@ export function SettingsPage() {
             </Card>
 
             {/* Dev Tools */}
+            {isDev && (
             <Card className="border-amber-500/50 bg-amber-500/5">
                 <CardHeader>
                     <div className="flex items-center justify-between">
@@ -130,6 +132,7 @@ export function SettingsPage() {
                     </CardContent>
                 )}
             </Card>
+            )}
         </div>
     );
 }

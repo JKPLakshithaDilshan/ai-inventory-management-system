@@ -1,4 +1,10 @@
+/**
+ * Suppliers Service
+ * API calls for supplier management
+ */
+
 import { http } from './http';
+import type { PaginatedResponse } from '@/types/common';
 
 export interface Supplier {
     id: number;
@@ -43,42 +49,69 @@ export interface SupplierCreateInput {
 
 export interface SupplierUpdateInput extends Partial<SupplierCreateInput> {}
 
-export interface PaginatedResponse<T> {
-    items: T[];
-    total: number;
-    page: number;
-    page_size: number;
-    total_pages: number;
-}
 
+/**
+ * Supplier API service methods
+ */
+export const supplierApi = {
+    async list(params?: {
+        skip?: number;
+        limit?: number;
+        search?: string;
+        is_active?: boolean;
+    }): Promise<PaginatedResponse<Supplier>> {
+        const query = new URLSearchParams();
+        
+        if (params?.skip !== undefined) query.append('skip', String(params.skip));
+        if (params?.limit !== undefined) query.append('limit', String(params.limit));
+        if (params?.search) query.append('search', params.search);
+        if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+
+        const url = query.toString() ? `/suppliers?${query.toString()}` : '/suppliers';
+        return http.get(url);
+    },
+
+    async getById(id: number): Promise<Supplier> {
+        return http.get(`/suppliers/${id}`);
+    },
+
+    async create(data: SupplierCreateInput): Promise<Supplier> {
+        return http.post('/suppliers', data);
+    },
+
+    async update(id: number, data: SupplierUpdateInput): Promise<Supplier> {
+        return http.put(`/suppliers/${id}`, data);
+    },
+
+    async delete(id: number): Promise<{ message: string }> {
+        return http.delete(`/suppliers/${id}`);
+    },
+};
+
+/**
+ * Legacy function wrappers for backwards compatibility
+ */
 export async function getSuppliers(
     skip = 0,
     limit = 100,
     search?: string,
     isActive?: boolean
 ): Promise<PaginatedResponse<Supplier>> {
-    const params = new URLSearchParams({
-        skip: String(skip),
-        limit: String(limit),
-        ...(search ? { search } : {}),
-        ...(typeof isActive === 'boolean' ? { is_active: String(isActive) } : {}),
-    });
-
-    return http.get(`/suppliers?${params}`, { method: 'GET' });
+    return supplierApi.list({ skip, limit, search, is_active: isActive });
 }
 
 export async function getSupplier(id: number): Promise<Supplier> {
-    return http.get(`/suppliers/${id}`);
+    return supplierApi.getById(id);
 }
 
 export async function createSupplier(data: SupplierCreateInput): Promise<Supplier> {
-    return http.post('/suppliers', data);
+    return supplierApi.create(data);
 }
 
 export async function updateSupplier(id: number, data: SupplierUpdateInput): Promise<Supplier> {
-    return http.put(`/suppliers/${id}`, data);
+    return supplierApi.update(id, data);
 }
 
 export async function deleteSupplier(id: number): Promise<{ message: string }> {
-    return http.delete(`/suppliers/${id}`);
+    return supplierApi.delete(id);
 }

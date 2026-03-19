@@ -1,13 +1,12 @@
-"""Stock ledger read endpoints."""
+"""Stock ledger endpoints - read-only audit trail of inventory movements."""
 
-from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import check_permission
 from app.models.stock_ledger import StockTransactionType
 from app.schemas.common import PaginationResponse
 from app.schemas.stock_ledger import StockLedgerResponse
@@ -16,90 +15,79 @@ from app.services.stock_ledger_service import StockLedgerService
 router = APIRouter()
 
 
-def _parse_transaction_type(raw_value: Optional[str]) -> Optional[StockTransactionType]:
-    """Parse movement type from IN/OUT/... or in/out/... values."""
-    if not raw_value:
-        return None
-
-    normalized = raw_value.strip().lower()
-
-    value_map = {
-        "in": StockTransactionType.IN,
-        "out": StockTransactionType.OUT,
-        "adjust": StockTransactionType.ADJUST,
-        "transfer": StockTransactionType.TRANSFER,
-    }
-
-    if normalized in value_map:
-        return value_map[normalized]
-
-    raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail="Invalid movement type. Use IN, OUT, ADJUST, or TRANSFER.",
-    )
-
-
 @router.get("", response_model=PaginationResponse[StockLedgerResponse])
 async def list_stock_ledger_entries(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
-    product_id: Optional[int] = Query(None, ge=1),
-    warehouse_id: Optional[int] = Query(None, ge=1),
-    type: Optional[str] = Query(None, description="IN | OUT | ADJUST | TRANSFER"),
-    movement_type: Optional[str] = Query(None, description="Alias for type"),
-    date_from: Optional[datetime] = Query(None),
-    date_to: Optional[datetime] = Query(None),
-    reference_type: Optional[str] = Query(None, max_length=50),
-    reference_id: Optional[int] = Query(None, ge=1),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    product_id: int | None = Query(None),
+    warehouse_id: int | None = Query(None),
+    type: StockTransactionType | None = Query(None),
+    reference_type: str | None = Query(None),
+    date_from: str | None = Query(None, description="ISO format date/datetime"),
+    date_to: str | None = Query(None, description="ISO format date/datetime"),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(check_permission("stock_ledger:view")),
 ):
-    """Get stock ledger entries with filters and pagination (newest first)."""
-    raw_type = movement_type or type
-    transaction_type = _parse_transaction_type(raw_type)
-
-    # If only date is provided, include the full day for date_to.
-    effective_date_to = date_to
-    if date_to and date_to.time().isoformat() == "00:00:00":
-        effective_date_to = date_to + timedelta(days=1) - timedelta(microseconds=1)
-
-    entries, total = await StockLedgerService.get_ledger_entries(
+    """
+    Retrieve stock ledger entries with pagination and filters.
+    
+    The stock ledger is an append-only audit trail of all inventory movements.
+    Every stock change creates a ledger entry (purchases, sales, adjustments, transfers).
+    
+    Filters:
+    - product_id: Show movements for specific product
+    - warehouse_id: Show movements for specific warehouse
+    - type: Filter by transaction type (in/out/adjust/transfer)
+    - reference_type: Filter by source (e.g., 'purchase', 'sale', 'stock_adjustment')
+    - date_from: Show entries created on or after this date
+    - date_to: Show entries created on or before this date
+    """
+    # Calculate page from skip/limit
+    page = (skip // limit) + 1
+    page_size = limit
+    
+    items, total = await StockLedgerService.get_ledger_entries(
         db=db,
         product_id=product_id,
         warehouse_id=warehouse_id,
-        transaction_type=transaction_type,
+        transaction_type=type,
         reference_type=reference_type,
-        reference_id=reference_id,
         date_from=date_from,
-        date_to=effective_date_to,
+        date_to=date_to,
         page=page,
         page_size=page_size,
     )
-
-    total_pages = (total + page_size - 1) // page_size
-
+    
+    total_pages = (total + limit - 1) // limit
+    current_page = page
+    
     return PaginationResponse(
-        items=entries,
+        items=items,
         total=total,
-        page=page,
+        page=current_page,
         page_size=page_size,
         total_pages=total_pages,
     )
 
 
-@router.get("/{entry_id}", response_model=StockLedgerResponse)
+@router.get("/{ledger_id}", response_model=StockLedgerResponse)
 async def get_stock_ledger_entry(
-    entry_id: int,
+    ledger_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(check_permission("stock_ledger:view")),
 ):
-    """Get stock ledger entry details by ID."""
-    entry = await StockLedgerService.get_entry_by_id(db, entry_id)
-
+    """
+    Retrieve a single stock ledger entry by ID.
+    
+    Returns detailed information about a specific inventory movement,
+    including related product, warehouse, and user information.
+    """
+    entry = await StockLedgerService.get_by_id(db=db, ledger_id=ledger_id)
+    
     if not entry:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Stock ledger entry not found",
+            detail=f"Stock ledger entry {ledger_id} not found",
         )
-
+    
     return entry

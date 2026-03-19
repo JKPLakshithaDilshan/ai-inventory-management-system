@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { StatCard } from '@/components/common/StatCard';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -145,17 +144,71 @@ export function DashboardPage() {
         return <Badge variant={variants[severity] || 'secondary'}>{label}</Badge>;
     };
 
+    const panelClass = 'rounded-2xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-sm';
+    const itemRowClass = 'flex items-center justify-between rounded-lg border border-transparent px-3 py-2 transition-colors cursor-pointer hover:border-primary/20 hover:bg-primary/5';
+    const metricCards = [
+        {
+            key: 'products',
+            title: 'Total Products',
+            value: stats?.products.total ?? 0,
+            description: 'In inventory',
+            icon: Package,
+            iconClass: 'bg-blue-100 text-blue-600 border-blue-200',
+        },
+        {
+            key: 'suppliers',
+            title: 'Total Suppliers',
+            value: suppliersCount,
+            description: 'Active vendors',
+            icon: Users,
+            iconClass: 'bg-indigo-100 text-indigo-600 border-indigo-200',
+        },
+        {
+            key: 'warehouses',
+            title: 'Warehouses',
+            value: warehousesCount,
+            description: 'Locations',
+            icon: Warehouse,
+            iconClass: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+        },
+        {
+            key: 'low-stock',
+            title: 'Low Stock',
+            value: stats?.products.low_stock ?? 0,
+            description: 'Need reorder',
+            icon: TrendingUp,
+            iconClass: 'bg-amber-100 text-amber-700 border-amber-200',
+        },
+        {
+            key: 'out-stock',
+            title: 'Out of Stock',
+            value: stats?.products.out_of_stock ?? 0,
+            description: 'Critical',
+            icon: AlertTriangle,
+            iconClass: 'bg-rose-100 text-rose-700 border-rose-200',
+        },
+        {
+            key: 'value',
+            title: 'Stock Value',
+            value: formatCurrency(stats?.inventory_value ?? 0),
+            description: 'Total inventory',
+            icon: DollarSign,
+            iconClass: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            valueClass: 'text-3xl',
+        },
+    ];
+
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
             <div className="overflow-y-auto">
-                <div className="p-6 space-y-8">
+                <div className="space-y-6 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_36%),radial-gradient(circle_at_12%_18%,rgba(16,185,129,0.08),transparent_26%)] p-6">
                     <PageHeader
                         title="Dashboard"
                         description="Welcome back! Here's your inventory overview."
                     />
 
                     {error && (
-                        <Card className="p-4 border-destructive/30 bg-destructive/5">
+                        <Card className="rounded-2xl border-destructive/30 bg-destructive/5 p-4 shadow-sm">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
                                     <X className="h-4 w-4 text-destructive" />
@@ -167,58 +220,60 @@ export function DashboardPage() {
                     )}
 
                     {/* KPI Cards */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/85 shadow-sm backdrop-blur-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:divide-x xl:divide-border/60">
                         {isLoading ? (
                             <>
                                 {[1, 2, 3, 4, 5, 6].map(i => (
-                                    <Card key={i} className="p-4">
-                                        <Skeleton className="h-4 w-20 mb-2" />
-                                        <Skeleton className="h-8 w-24 mb-2" />
-                                        <Skeleton className="h-3 w-16" />
-                                    </Card>
+                                    <div key={i} className="space-y-4 border-b border-border/60 p-5 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 lg:[&:nth-last-child(-n+3)]:border-b-0 xl:border-b-0">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <Skeleton className="h-4 w-24" />
+                                            <Skeleton className="h-10 w-10 rounded-xl" />
+                                        </div>
+                                        <Skeleton className="h-9 w-24" />
+                                        <Skeleton className="h-4 w-20" />
+                                    </div>
                                 ))}
                             </>
                         ) : (
                             <>
-                                <StatCard
-                                    title="Total Products"
-                                    value={stats?.products.total ?? 0}
-                                    description="In inventory"
-                                    icon={Package}
-                                />
-                                <StatCard
-                                    title="Total Suppliers"
-                                    value={suppliersCount}
-                                    description="Active vendors"
-                                    icon={Users}
-                                />
-                                <StatCard
-                                    title="Warehouses"
-                                    value={warehousesCount}
-                                    description="Locations"
-                                    icon={Warehouse}
-                                />
-                                <StatCard
-                                    title="Low Stock"
-                                    value={stats?.products.low_stock ?? 0}
-                                    description="Need reorder"
-                                    icon={TrendingUp}
-                                />
-                                <StatCard
-                                    title="Out of Stock"
-                                    value={stats?.products.out_of_stock ?? 0}
-                                    description="Critical"
-                                    icon={AlertTriangle}
-                                />
-                                <StatCard
-                                    title="Stock Value"
-                                    value={formatCurrency(stats?.inventory_value ?? 0)}
-                                    description="Total inventory"
-                                    icon={DollarSign}
-                                />
+                                {metricCards.map((metric, index) => {
+                                    const Icon = metric.icon;
+                                    const borderClearClass = [
+                                        'border-b border-border/60',
+                                        'sm:[&:nth-last-child(-n+2)]:border-b-0',
+                                        'lg:[&:nth-last-child(-n+3)]:border-b-0',
+                                        'xl:border-b-0',
+                                    ].join(' ');
+
+                                    return (
+                                        <div
+                                            key={metric.key}
+                                            className={`group relative space-y-4 p-5 transition-colors hover:bg-primary/[0.03] ${index === metricCards.length - 1 ? 'border-b-0' : borderClearClass}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <p className="text-xs font-semibold uppercase tracking-[0.02em] text-muted-foreground/90">
+                                                    {metric.title}
+                                                </p>
+                                                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-sm ${metric.iconClass}`}>
+                                                    <Icon className="h-5 w-5" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className={`font-bold tracking-tight text-foreground ${metric.valueClass ?? 'text-5xl lg:text-4xl'}`}>
+                                                    {metric.value}
+                                                </p>
+                                                <p className="mt-2 text-sm text-muted-foreground">
+                                                    {metric.description}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </>
                         )}
                     </div>
+                    </Card>
 
                     {/* Quick Actions */}
                     <div className="space-y-3">
@@ -226,7 +281,7 @@ export function DashboardPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <Button 
                                 variant="outline" 
-                                className="justify-start h-auto py-3"
+                                className="h-auto justify-start rounded-2xl border-border/60 bg-gradient-to-br from-background to-muted/40 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                                 onClick={() => navigate('/purchases/new')}
                             >
                                 <Plus className="mr-2 h-4 w-4" />
@@ -237,7 +292,7 @@ export function DashboardPage() {
                             </Button>
                             <Button 
                                 variant="outline" 
-                                className="justify-start h-auto py-3"
+                                className="h-auto justify-start rounded-2xl border-border/60 bg-gradient-to-br from-background to-muted/40 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                                 onClick={() => navigate('/sales/new')}
                             >
                                 <Plus className="mr-2 h-4 w-4" />
@@ -248,7 +303,7 @@ export function DashboardPage() {
                             </Button>
                             <Button 
                                 variant="outline" 
-                                className="justify-start h-auto py-3"
+                                className="h-auto justify-start rounded-2xl border-border/60 bg-gradient-to-br from-background to-muted/40 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                                 onClick={() => navigate('/products')}
                             >
                                 <Package className="mr-2 h-4 w-4" />
@@ -259,7 +314,7 @@ export function DashboardPage() {
                             </Button>
                             <Button 
                                 variant="outline" 
-                                className="justify-start h-auto py-3"
+                                className="h-auto justify-start rounded-2xl border-border/60 bg-gradient-to-br from-background to-muted/40 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                                 onClick={() => navigate('/stock-ledger')}
                             >
                                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -283,7 +338,7 @@ export function DashboardPage() {
                             </div>
 
                             {isLoading ? (
-                                <Card className="p-4 space-y-3">
+                                <Card className={`${panelClass} p-4 space-y-3`}>
                                     {[1, 2, 3].map(i => (
                                         <div key={i} className="flex items-center justify-between">
                                             <div className="flex-1">
@@ -295,7 +350,7 @@ export function DashboardPage() {
                                     ))}
                                 </Card>
                             ) : (
-                                <Card className="p-4">
+                                <Card className={`${panelClass} p-4`}>
                                     <div className="space-y-3">
                                         {reorderSuggestions.length === 0 ? (
                                             <p className="text-sm text-muted-foreground py-4 text-center">No reorder suggestions at this time</p>
@@ -303,7 +358,7 @@ export function DashboardPage() {
                                             reorderSuggestions.map((suggestion) => (
                                                 <div 
                                                     key={suggestion.product_id} 
-                                                    className="flex items-center justify-between pb-3 last:pb-0 last:border-0 border-b border-border/50 cursor-pointer hover:bg-accent/50 -mx-4 px-4 rounded transition-colors"
+                                                    className={itemRowClass}
                                                     onClick={() => navigate(`/products/${suggestion.product_id}`)}
                                                 >
                                                     <div className="flex-1">
@@ -331,7 +386,7 @@ export function DashboardPage() {
                             </div>
 
                             {isLoading ? (
-                                <Card className="p-4 space-y-3">
+                                <Card className={`${panelClass} p-4 space-y-3`}>
                                     {[1, 2, 3].map(i => (
                                         <div key={i} className="flex items-center justify-between">
                                             <div className="flex-1">
@@ -343,7 +398,7 @@ export function DashboardPage() {
                                     ))}
                                 </Card>
                             ) : (
-                                <Card className="p-4">
+                                <Card className={`${panelClass} p-4`}>
                                     <div className="space-y-3">
                                         {slowMovingStock.length === 0 ? (
                                             <p className="text-sm text-muted-foreground py-4 text-center">No slow-moving stock detected</p>
@@ -351,7 +406,7 @@ export function DashboardPage() {
                                             slowMovingStock.map((item) => (
                                                 <div 
                                                     key={item.product_id} 
-                                                    className="flex items-center justify-between pb-3 last:pb-0 last:border-0 border-b border-border/50 cursor-pointer hover:bg-accent/50 -mx-4 px-4 rounded transition-colors"
+                                                    className={itemRowClass}
                                                     onClick={() => navigate(`/products/${item.product_id}`)}
                                                 >
                                                     <div className="flex-1">
@@ -383,7 +438,7 @@ export function DashboardPage() {
                             </div>
 
                             {isLoading ? (
-                                <Card className="p-4 space-y-3">
+                                <Card className={`${panelClass} p-4 space-y-3`}>
                                     {[1, 2, 3].map(i => (
                                         <div key={i} className="flex items-center justify-between">
                                             <div className="flex-1">
@@ -395,7 +450,7 @@ export function DashboardPage() {
                                     ))}
                                 </Card>
                             ) : (
-                                <Card className="p-4">
+                                <Card className={`${panelClass} p-4`}>
                                     <div className="space-y-3">
                                         {recentPurchases.length === 0 ? (
                                             <p className="text-sm text-muted-foreground py-4 text-center">No recent purchases</p>
@@ -403,7 +458,7 @@ export function DashboardPage() {
                                             recentPurchases.map((purchase) => (
                                                 <div 
                                                     key={purchase.id} 
-                                                    className="flex items-center justify-between pb-3 last:pb-0 last:border-0 border-b border-border/50 cursor-pointer hover:bg-accent/50 -mx-4 px-4 rounded transition-colors"
+                                                    className={itemRowClass}
                                                     onClick={() => navigate(`/purchases/${purchase.id}`)}
                                                 >
                                                     <div className="flex-1">
@@ -435,7 +490,7 @@ export function DashboardPage() {
                             </div>
 
                             {isLoading ? (
-                                <Card className="p-4 space-y-3">
+                                <Card className={`${panelClass} p-4 space-y-3`}>
                                     {[1, 2, 3].map(i => (
                                         <div key={i} className="flex items-center justify-between">
                                             <div className="flex-1">
@@ -447,7 +502,7 @@ export function DashboardPage() {
                                     ))}
                                 </Card>
                             ) : (
-                                <Card className="p-4">
+                                <Card className={`${panelClass} p-4`}>
                                     <div className="space-y-3">
                                         {recentSales.length === 0 ? (
                                             <p className="text-sm text-muted-foreground py-4 text-center">No recent sales</p>
@@ -455,7 +510,7 @@ export function DashboardPage() {
                                             recentSales.map((sale) => (
                                                 <div 
                                                     key={sale.id} 
-                                                    className="flex items-center justify-between pb-3 last:pb-0 last:border-0 border-b border-border/50 cursor-pointer hover:bg-accent/50 -mx-4 px-4 rounded transition-colors"
+                                                    className={itemRowClass}
                                                     onClick={() => navigate(`/sales/${sale.id}`)}
                                                 >
                                                     <div className="flex-1">
@@ -479,7 +534,7 @@ export function DashboardPage() {
                         <h2 className="text-lg font-semibold tracking-tight">Recent Activity</h2>
 
                         {isLoading ? (
-                            <Card className="p-4 space-y-3">
+                            <Card className={`${panelClass} p-4 space-y-3`}>
                                 {[1, 2, 3, 4].map(i => (
                                     <div key={i} className="flex items-start justify-between">
                                         <div className="flex-1">
@@ -491,13 +546,13 @@ export function DashboardPage() {
                                 ))}
                             </Card>
                         ) : (
-                            <Card className="p-4">
+                            <Card className={`${panelClass} p-4`}>
                                 <div className="space-y-3">
                                     {activities.length === 0 ? (
                                         <p className="text-sm text-muted-foreground py-4 text-center">No recent activities found</p>
                                     ) : (
                                         activities.map((item) => (
-                                            <div key={item.id} className="flex items-start justify-between pb-3 last:pb-0 last:border-0 border-b border-border/50">
+                                            <div key={item.id} className="flex items-start justify-between rounded-lg border border-transparent px-3 py-2 transition-colors hover:border-primary/20 hover:bg-primary/5">
                                                 <div className="flex-1 pr-4">
                                                     <p className="font-medium text-sm">{toTitleCase(item.action)} · {toTitleCase(item.resource_type)}</p>
                                                     <p className="text-xs text-muted-foreground mt-1">{item.description}</p>

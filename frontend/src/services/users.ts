@@ -17,6 +17,18 @@ export interface Permission {
     created_at: string;
 }
 
+export interface RoleCreateInput {
+    name: string;
+    description?: string;
+    permission_ids: number[];
+}
+
+export interface RoleUpdateInput {
+    name?: string;
+    description?: string;
+    permission_ids?: number[];
+}
+
 export interface User {
     id: number;
     email: string;
@@ -77,6 +89,22 @@ export async function getUsers(
 
 export async function getUser(id: number): Promise<User> {
     return http.get(`/users/${id}`);
+}
+
+export async function getRoles(): Promise<Role[]> {
+    return http.get(`/users/roles`);
+}
+
+export async function getPermissions(): Promise<Permission[]> {
+    return http.get(`/users/permissions`);
+}
+
+export async function createRole(data: RoleCreateInput): Promise<Role> {
+    return http.post(`/users/roles`, data);
+}
+
+export async function updateRole(id: number, data: RoleUpdateInput): Promise<Role> {
+    return http.put(`/users/roles/${id}`, data);
 }
 
 export async function createUser(data: UserCreateInput): Promise<User> {

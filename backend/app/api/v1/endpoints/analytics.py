@@ -1,13 +1,10 @@
 """API endpoints for analytics and AI-powered features."""
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.rate_limit import ai_rate_limit, alerts_rate_limit
-from app.core.security import get_current_user
+from app.core.security import check_permission
 from app.models.user import User
 from app.schemas.analytics import (
     ReorderSuggestionsResponse,
@@ -15,66 +12,20 @@ from app.schemas.analytics import (
     DemandForecastResponse,
     ForecastDataPoint,
     SlowMovingStockResponse,
-    SlowMovingStockItem,
-    InventoryAlert,
-    InventoryAlertsResponse,
+    SlowMovingStockItem
 )
 from app.services.analytics_service import AnalyticsService
 
 router = APIRouter()
 
 
-@router.get("/inventory-alerts", response_model=InventoryAlertsResponse, dependencies=[Depends(alerts_rate_limit)])
-async def get_inventory_alerts(
-    days_lookback: int = Query(30, ge=7, le=365, description="Days to analyze for trend signals"),
-    spike_multiplier: float = Query(1.8, ge=1.2, le=5.0, description="Demand spike sensitivity multiplier"),
-    overstock_multiplier: float = Query(2.5, ge=1.2, le=10.0, description="Multiplier for overstock threshold"),
-    warehouse_id: int | None = Query(None, ge=1, description="Optional warehouse filter"),
-    include_reorder_recommended: bool = Query(True, description="Include reorder recommendation alerts"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Return inventory alerts generated from stock levels and demand signals."""
-    analytics_service = AnalyticsService(db)
-
-    try:
-        alerts = await analytics_service.get_inventory_alerts(
-            days_lookback=days_lookback,
-            spike_multiplier=spike_multiplier,
-            overstock_multiplier=overstock_multiplier,
-            warehouse_id=warehouse_id,
-            include_reorder_recommended=include_reorder_recommended,
-        )
-
-        severity_counts = {
-            "critical": sum(1 for row in alerts if row["severity"] == "critical"),
-            "high": sum(1 for row in alerts if row["severity"] == "high"),
-            "medium": sum(1 for row in alerts if row["severity"] == "medium"),
-            "low": sum(1 for row in alerts if row["severity"] == "low"),
-        }
-
-        return InventoryAlertsResponse(
-            alerts=[InventoryAlert(**row) for row in alerts],
-            total_count=len(alerts),
-            critical_count=severity_counts["critical"],
-            high_count=severity_counts["high"],
-            medium_count=severity_counts["medium"],
-            low_count=severity_counts["low"],
-            generated_at=datetime.utcnow().isoformat(),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating inventory alerts: {str(e)}")
-
-
-@router.get("/reorder-suggestions", response_model=ReorderSuggestionsResponse, dependencies=[Depends(alerts_rate_limit)])
+@router.get("/reorder-suggestions", response_model=ReorderSuggestionsResponse)
 async def get_reorder_suggestions(
     days_lookback: int = Query(30, ge=1, le=365, description="Days to analyze for sales velocity"),
     safety_stock_multiplier: float = Query(1.5, ge=1.0, le=5.0, description="Safety stock multiplier"),
     min_lead_time_days: int = Query(7, ge=1, le=90, description="Minimum lead time in days"),
-    warehouse_id: int | None = Query(None, ge=1, description="Optional warehouse filter for location-level recommendations"),
-    sort_by: str = Query("urgency", pattern="^(urgency|stockout_risk)$", description="Sorting mode for suggestions"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(check_permission("ai:reorder:view"))
 ):
     """
     Get AI-powered reorder suggestions based on:
@@ -91,9 +42,7 @@ async def get_reorder_suggestions(
         suggestions = await analytics_service.get_reorder_suggestions(
             days_lookback=days_lookback,
             safety_stock_multiplier=safety_stock_multiplier,
-            min_lead_time_days=min_lead_time_days,
-            warehouse_id=warehouse_id,
-            sort_by=sort_by,
+            min_lead_time_days=min_lead_time_days
         )
         
         # Count by urgency
@@ -110,14 +59,14 @@ async def get_reorder_suggestions(
         raise HTTPException(status_code=500, detail=f"Error generating reorder suggestions: {str(e)}")
 
 
-@router.get("/demand-forecast/{product_id}", response_model=DemandForecastResponse, dependencies=[Depends(ai_rate_limit)])
+@router.get("/demand-forecast/{product_id}", response_model=DemandForecastResponse)
 async def get_demand_forecast(
     product_id: int,
     days_history: int = Query(30, ge=7, le=365, description="Days of historical data to analyze"),
     days_forecast: int = Query(14, ge=1, le=90, description="Days to forecast into the future"),
     method: str = Query("weighted_average", regex="^(weighted_average|moving_average)$"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(check_permission("ai:forecast:view"))
 ):
     """
     Generate demand forecast for a specific product using:
@@ -141,13 +90,13 @@ async def get_demand_forecast(
         raise HTTPException(status_code=500, detail=f"Error generating demand forecast: {str(e)}")
 
 
-@router.get("/slow-moving-stock", response_model=SlowMovingStockResponse, dependencies=[Depends(ai_rate_limit)])
+@router.get("/slow-moving-stock", response_model=SlowMovingStockResponse)
 async def detect_slow_moving_stock(
     days_lookback: int = Query(90, ge=30, le=365, description="Days to analyze for movement"),
     min_days_no_sales: int = Query(30, ge=7, le=180, description="Minimum days without sales to flag"),
     turnover_threshold: float = Query(0.5, ge=0.0, le=5.0, description="Minimum turnover ratio threshold"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(check_permission("ai:reorder:view"))
 ):
     """
     Detect slow-moving and dead stock based on:

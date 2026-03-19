@@ -1,16 +1,14 @@
 """Analytics service for AI features: reorder suggestions, demand forecasting, slow-moving stock detection."""
 
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, date
 from typing import Optional
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product, StockStatus
 from app.models.sale import Sale, SaleItem, SaleStatus
 from app.models.purchase import Purchase, PurchaseItem, PurchaseStatus
 from app.models.supplier import Supplier
-from app.models.product_location import ProductLocation
-from app.models.warehouse import Warehouse
 
 
 class AnalyticsService:
@@ -23,9 +21,7 @@ class AnalyticsService:
         self,
         days_lookback: int = 30,
         safety_stock_multiplier: float = 1.5,
-        min_lead_time_days: int = 7,
-        warehouse_id: Optional[int] = None,
-        sort_by: str = "urgency",
+        min_lead_time_days: int = 7
     ) -> list[dict]:
         """
         Generate reorder suggestions based on:
@@ -36,28 +32,16 @@ class AnalyticsService:
         
         Returns products that need reordering with suggested quantities.
         """
-        if warehouse_id is not None:
-            products_stmt = (
-                select(Product, ProductLocation, Warehouse)
-                .join(ProductLocation, ProductLocation.product_id == Product.id)
-                .join(Warehouse, Warehouse.id == ProductLocation.warehouse_id)
-                .where(
-                    ProductLocation.warehouse_id == warehouse_id,
-                    ProductLocation.quantity <= Product.reorder_level,
-                )
-            )
-            products_result = await self.db.execute(products_stmt)
-            product_rows = products_result.all()
-        else:
-            products_stmt = select(Product).where(Product.quantity <= Product.reorder_level)
-            products_result = await self.db.execute(products_stmt)
-            products = products_result.scalars().all()
-            product_rows = [(product, None, None) for product in products]
+        # Get all products with low stock or below reorder level
+        products_stmt = select(Product).where(
+            Product.quantity <= Product.reorder_level
+        )
+        products_result = await self.db.execute(products_stmt)
+        products = products_result.scalars().all()
         
         suggestions = []
         
-        for product, product_location, warehouse in product_rows:
-            current_stock = product_location.quantity if product_location else product.quantity
+        for product in products:
             # Calculate sales velocity (average daily sales over lookback period)
             cutoff_date = datetime.now() - timedelta(days=days_lookback)
             
@@ -70,19 +54,17 @@ class AnalyticsService:
                     Sale.created_at >= cutoff_date
                 )
             )
-            if warehouse_id is not None:
-                sales_stmt = sales_stmt.where(Sale.warehouse_id == warehouse_id)
             sales_result = await self.db.execute(sales_stmt)
             total_sold = sales_result.scalar() or 0
             
             avg_daily_sales = total_sold / days_lookback if days_lookback > 0 else 0
             
             # Estimate lead time from past purchases
-            # Note: In PostgreSQL, DATE - DATE already returns an integer (days),
-            # so we don't need EXTRACT; we can average the days directly
             lead_time_stmt = (
                 select(
-                    func.avg(Purchase.received_date - Purchase.purchase_date)
+                    func.avg(
+                        func.extract('day', Purchase.received_date - Purchase.purchase_date)
+                    )
                 )
                 .join(PurchaseItem, Purchase.id == PurchaseItem.purchase_id)
                 .where(
@@ -92,15 +74,13 @@ class AnalyticsService:
                     Purchase.purchase_date.isnot(None)
                 )
             )
-            if warehouse_id is not None:
-                lead_time_stmt = lead_time_stmt.where(Purchase.warehouse_id == warehouse_id)
             lead_time_result = await self.db.execute(lead_time_stmt)
             avg_lead_time = lead_time_result.scalar() or min_lead_time_days
             avg_lead_time = max(avg_lead_time, min_lead_time_days)
             
             # Calculate days until stockout
             days_until_stockout = (
-                current_stock / avg_daily_sales if avg_daily_sales > 0 else 999
+                product.quantity / avg_daily_sales if avg_daily_sales > 0 else 999
             )
             
             # Calculate suggested order quantity
@@ -108,11 +88,11 @@ class AnalyticsService:
             safety_stock = avg_daily_sales * avg_lead_time * safety_stock_multiplier
             suggested_qty = max(
                 product.reorder_quantity,
-                int(safety_stock + (avg_daily_sales * avg_lead_time) - current_stock)
+                int(safety_stock + (avg_daily_sales * avg_lead_time) - product.quantity)
             )
             
             # Determine urgency
-            if days_until_stockout <= 0 or current_stock <= 0:
+            if days_until_stockout <= 0 or product.quantity <= 0:
                 urgency = "critical"
             elif days_until_stockout <= avg_lead_time:
                 urgency = "high"
@@ -120,23 +100,6 @@ class AnalyticsService:
                 urgency = "medium"
             else:
                 urgency = "low"
-
-            # 0-100 risk score, where higher means higher stockout risk.
-            if avg_daily_sales <= 0:
-                stockout_risk_score = 15.0 if current_stock <= product.reorder_level else 0.0
-            else:
-                risk_horizon_days = max(float(avg_lead_time), 1.0)
-                risk_ratio = max(0.0, 1.0 - (days_until_stockout / risk_horizon_days))
-                stockout_risk_score = min(100.0, round(risk_ratio * 100.0, 1))
-
-            if current_stock <= 0:
-                reason = "No stock on hand. Reorder immediately to avoid missed sales."
-            elif avg_daily_sales <= 0:
-                reason = "At or below reorder level with limited sales history. Maintain safety replenishment."
-            elif days_until_stockout <= avg_lead_time:
-                reason = f"Projected stockout in {max(days_until_stockout, 0):.1f} days, within lead time of {avg_lead_time:.0f} days."
-            else:
-                reason = f"Stock is below threshold. Suggested quantity covers lead time demand plus safety stock."
             
             # Get preferred supplier (most recent purchase)
             supplier_stmt = (
@@ -154,27 +117,20 @@ class AnalyticsService:
                 "product_id": product.id,
                 "product_sku": product.sku,
                 "product_name": product.name,
-                "warehouse_id": warehouse.id if warehouse else None,
-                "warehouse_name": warehouse.name if warehouse else None,
-                "current_stock": current_stock,
+                "current_stock": product.quantity,
                 "reorder_level": product.reorder_level,
                 "suggested_order_qty": suggested_qty,
                 "avg_daily_sales": round(avg_daily_sales, 2),
                 "estimated_lead_time_days": int(avg_lead_time),
                 "days_until_stockout": round(days_until_stockout, 1),
-                "stockout_risk_score": stockout_risk_score,
                 "urgency": urgency,
-                "recommendation_reason": reason,
                 "supplier_id": supplier.id if supplier else None,
                 "supplier_name": supplier.name if supplier else None,
             })
         
-        # Default sort by urgency (critical first) and days until stockout
+        # Sort by urgency (critical first) and days until stockout
         urgency_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-        if sort_by == "stockout_risk":
-            suggestions.sort(key=lambda x: (-x["stockout_risk_score"], x["days_until_stockout"]))
-        else:
-            suggestions.sort(key=lambda x: (urgency_order[x["urgency"]], x["days_until_stockout"]))
+        suggestions.sort(key=lambda x: (urgency_order[x["urgency"]], x["days_until_stockout"]))
         
         return suggestions
     
@@ -374,193 +330,3 @@ class AnalyticsService:
             return "Monitor closely. Reduce future orders for this item."
         else:
             return "Watch for trends. Consider promotional activities."
-
-    async def get_inventory_alerts(
-        self,
-        days_lookback: int = 30,
-        spike_multiplier: float = 1.8,
-        overstock_multiplier: float = 2.5,
-        warehouse_id: Optional[int] = None,
-        include_reorder_recommended: bool = True,
-    ) -> list[dict]:
-        """Generate inventory alerts from real stock levels and sales behavior."""
-        now_iso = datetime.now(timezone.utc).isoformat()
-        alerts: list[dict] = []
-
-        if warehouse_id is not None:
-            products_stmt = (
-                select(Product, ProductLocation, Warehouse)
-                .join(ProductLocation, ProductLocation.product_id == Product.id)
-                .join(Warehouse, Warehouse.id == ProductLocation.warehouse_id)
-                .where(ProductLocation.warehouse_id == warehouse_id)
-            )
-            products_result = await self.db.execute(products_stmt)
-            product_rows = products_result.all()
-        else:
-            products_stmt = select(Product)
-            products_result = await self.db.execute(products_stmt)
-            products = products_result.scalars().all()
-            product_rows = [(product, None, None) for product in products]
-
-        recent_window_days = max(3, min(7, days_lookback // 2))
-        prior_window_days = recent_window_days
-        recent_cutoff = datetime.now() - timedelta(days=recent_window_days)
-        prior_cutoff_start = datetime.now() - timedelta(days=recent_window_days + prior_window_days)
-
-        for product, product_location, warehouse in product_rows:
-            current_stock = product_location.quantity if product_location else product.quantity
-            warehouse_name = warehouse.name if warehouse else None
-            warehouse_pk = warehouse.id if warehouse else None
-
-            # Find most recent supplier context for this product.
-            supplier_stmt = (
-                select(Supplier)
-                .join(Purchase, Supplier.id == Purchase.supplier_id)
-                .join(PurchaseItem, Purchase.id == PurchaseItem.purchase_id)
-                .where(PurchaseItem.product_id == product.id)
-                .order_by(desc(Purchase.purchase_date))
-                .limit(1)
-            )
-            if warehouse_id is not None:
-                supplier_stmt = supplier_stmt.where(Purchase.warehouse_id == warehouse_id)
-            supplier_result = await self.db.execute(supplier_stmt)
-            supplier = supplier_result.scalar_one_or_none()
-
-            def append_alert(
-                alert_type: str,
-                severity: str,
-                title: str,
-                message: str,
-                suggested_order_qty: Optional[int] = None,
-                stockout_risk_score: Optional[float] = None,
-            ):
-                alerts.append({
-                    "alert_id": f"{alert_type}:{product.id}:{warehouse_pk or 0}",
-                    "alert_type": alert_type,
-                    "severity": severity,
-                    "title": title,
-                    "message": message,
-                    "product_id": product.id,
-                    "product_sku": product.sku,
-                    "product_name": product.name,
-                    "warehouse_id": warehouse_pk,
-                    "warehouse_name": warehouse_name,
-                    "current_stock": current_stock,
-                    "reorder_level": product.reorder_level,
-                    "suggested_order_qty": suggested_order_qty,
-                    "stockout_risk_score": stockout_risk_score,
-                    "supplier_id": supplier.id if supplier else None,
-                    "supplier_name": supplier.name if supplier else None,
-                    "detected_at": now_iso,
-                })
-
-            # Out-of-stock and low-stock alerts.
-            if current_stock <= 0:
-                append_alert(
-                    alert_type="out_of_stock",
-                    severity="critical",
-                    title="Out of stock",
-                    message="No inventory on hand. Replenishment required immediately.",
-                )
-            elif current_stock <= product.reorder_level:
-                low_stock_severity = "high" if current_stock <= max(1, int(product.reorder_level * 0.5)) else "medium"
-                append_alert(
-                    alert_type="low_stock",
-                    severity=low_stock_severity,
-                    title="Low stock",
-                    message=f"Stock ({current_stock}) is at or below reorder level ({product.reorder_level}).",
-                )
-
-            # Recent vs prior demand window for demand spike risk detection.
-            recent_sales_stmt = (
-                select(func.sum(SaleItem.quantity))
-                .join(Sale, SaleItem.sale_id == Sale.id)
-                .where(
-                    SaleItem.product_id == product.id,
-                    Sale.status == SaleStatus.COMPLETED,
-                    Sale.sale_date >= recent_cutoff,
-                )
-            )
-            prior_sales_stmt = (
-                select(func.sum(SaleItem.quantity))
-                .join(Sale, SaleItem.sale_id == Sale.id)
-                .where(
-                    SaleItem.product_id == product.id,
-                    Sale.status == SaleStatus.COMPLETED,
-                    Sale.sale_date >= prior_cutoff_start,
-                    Sale.sale_date < recent_cutoff,
-                )
-            )
-            if warehouse_id is not None:
-                recent_sales_stmt = recent_sales_stmt.where(Sale.warehouse_id == warehouse_id)
-                prior_sales_stmt = prior_sales_stmt.where(Sale.warehouse_id == warehouse_id)
-
-            recent_sales_result = await self.db.execute(recent_sales_stmt)
-            prior_sales_result = await self.db.execute(prior_sales_stmt)
-            recent_sales_qty = float(recent_sales_result.scalar() or 0)
-            prior_sales_qty = float(prior_sales_result.scalar() or 0)
-
-            recent_daily_avg = recent_sales_qty / recent_window_days
-            prior_daily_avg = prior_sales_qty / prior_window_days
-
-            if prior_daily_avg > 0 and recent_daily_avg >= prior_daily_avg * spike_multiplier:
-                spike_severity = "high" if current_stock <= int(product.reorder_level * 1.25) else "medium"
-                append_alert(
-                    alert_type="demand_spike_risk",
-                    severity=spike_severity,
-                    title="Demand spike risk",
-                    message=(
-                        f"Recent demand increased from {prior_daily_avg:.2f}/day to {recent_daily_avg:.2f}/day. "
-                        "Current inventory may not sustain this pace."
-                    ),
-                )
-
-            # Overstock alert when stock is substantially above configured target and demand is weak.
-            overstock_threshold = max(int(product.reorder_level * overstock_multiplier), product.reorder_level + product.reorder_quantity)
-            if current_stock >= overstock_threshold and recent_daily_avg <= max(product.reorder_level / 60, 0.2):
-                append_alert(
-                    alert_type="overstock",
-                    severity="low",
-                    title="Overstock detected",
-                    message=(
-                        f"Current stock ({current_stock}) is above threshold ({overstock_threshold}) with low recent movement."
-                    ),
-                )
-
-        if include_reorder_recommended:
-            reorder_suggestions = await self.get_reorder_suggestions(
-                days_lookback=days_lookback,
-                warehouse_id=warehouse_id,
-                sort_by="urgency",
-            )
-            urgency_to_severity = {
-                "critical": "critical",
-                "high": "high",
-                "medium": "medium",
-                "low": "low",
-            }
-            for suggestion in reorder_suggestions:
-                alerts.append({
-                    "alert_id": f"reorder_recommended:{suggestion['product_id']}:{suggestion.get('warehouse_id') or 0}",
-                    "alert_type": "reorder_recommended",
-                    "severity": urgency_to_severity.get(suggestion["urgency"], "medium"),
-                    "title": "Reorder recommended",
-                    "message": suggestion["recommendation_reason"],
-                    "product_id": suggestion["product_id"],
-                    "product_sku": suggestion["product_sku"],
-                    "product_name": suggestion["product_name"],
-                    "warehouse_id": suggestion.get("warehouse_id"),
-                    "warehouse_name": suggestion.get("warehouse_name"),
-                    "current_stock": suggestion["current_stock"],
-                    "reorder_level": suggestion["reorder_level"],
-                    "suggested_order_qty": suggestion["suggested_order_qty"],
-                    "stockout_risk_score": suggestion["stockout_risk_score"],
-                    "supplier_id": suggestion.get("supplier_id"),
-                    "supplier_name": suggestion.get("supplier_name"),
-                    "detected_at": now_iso,
-                })
-
-        severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-        alerts.sort(key=lambda row: (severity_order.get(row["severity"], 99), row["alert_type"], row["product_name"]))
-
-        return alerts

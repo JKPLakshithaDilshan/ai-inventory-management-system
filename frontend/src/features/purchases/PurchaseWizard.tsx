@@ -45,10 +45,10 @@ export function PurchaseWizard() {
             <Card>
                 <div className="border-b px-6 py-4">
                     <nav aria-label="Progress">
-                        <ol role="list" className="flex items-center">
+                        <ol role="list" className="flex items-center gap-2">
                             {STEPS.map((s, stepIdx) => (
-                                <li key={s.name} className={`relative ${stepIdx !== STEPS.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                                    <div className="flex items-center">
+                                <li key={s.name} className="relative flex flex-1 items-center last:flex-none">
+                                    <div className="relative z-10 flex items-center bg-card pr-4">
                                         <div
                                             className={`
                                                 flex h-8 w-8 items-center justify-center rounded-full border-2 
@@ -81,7 +81,7 @@ export function PurchaseWizard() {
                                         </span>
                                     </div>
                                     {stepIdx !== STEPS.length - 1 ? (
-                                        <div className="absolute top-4 w-full left-0 -ml-10 sm:-ml-20">
+                                        <div className="absolute left-8 right-0 top-4 z-0">
                                             <div
                                                 className={`h-0.5 w-full ${step > s.id ? 'bg-primary' : 'bg-muted'
                                                     }`}

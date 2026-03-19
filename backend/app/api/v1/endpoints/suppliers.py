@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import check_permission
 from app.schemas.supplier import SupplierCreate, SupplierUpdate, SupplierResponse
 from app.schemas.common import MessageResponse, PaginationResponse
 from app.services.supplier_service import SupplierService
@@ -19,7 +19,7 @@ async def list_suppliers(
     search: str = Query(None),
     is_active: bool = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("suppliers:view"))
 ):
     """
     Retrieve suppliers with pagination and filters.
@@ -48,7 +48,7 @@ async def list_suppliers(
 async def create_supplier(
     supplier_in: SupplierCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("suppliers:manage"))
 ):
     """
     Create new supplier.
@@ -71,7 +71,7 @@ async def create_supplier(
 async def get_supplier(
     supplier_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("suppliers:view"))
 ):
     """
     Get supplier by ID.
@@ -93,7 +93,7 @@ async def update_supplier(
     supplier_id: int,
     supplier_in: SupplierUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("suppliers:manage"))
 ):
     """
     Update supplier.
@@ -115,7 +115,7 @@ async def update_supplier(
 async def delete_supplier(
     supplier_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("suppliers:manage"))
 ):
     """
     Delete supplier.

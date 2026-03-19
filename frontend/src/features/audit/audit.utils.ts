@@ -12,7 +12,7 @@ export function groupByDate(logs: AuditLog[]): Record<string, AuditLog[]> {
     const grouped: Record<string, AuditLog[]> = {};
 
     logs.forEach(log => {
-        const date = new Date(log.timestamp);
+        const date = new Date(log.created_at);
         const dateKey = format(date, 'yyyy-MM-dd');
 
         if (!grouped[dateKey]) {
@@ -57,11 +57,41 @@ export function formatTime(timestamp: string): string {
 }
 
 /**
+ * Get user name from audit log
+ */
+export function getUserName(log: AuditLog): string {
+    if (log.user?.full_name) {
+        return log.user.full_name;
+    }
+    if (log.user?.username) {
+        return log.user.username;
+    }
+    return 'System';
+}
+
+/**
+ * Get user role from audit log
+ */
+export function getUserRole(log: AuditLog): string {
+    return log.user?.role || 'SYSTEM';
+}
+
+/**
+ * Get entity name from audit log
+ */
+export function getEntityName(log: AuditLog): string {
+    if (log.description) {
+        return log.description;
+    }
+    return `${log.resource_type} #${log.resource_id || 'N/A'}`;
+}
+
+/**
  * Filter logs based on criteria
  */
 export function filterLogs(logs: AuditLog[], filters: {
     search?: string;
-    module?: string;
+    resource_type?: string;
     action?: string;
     dateRange?: 'today' | '7days' | '30days' | 'all';
 }): AuditLog[] {
@@ -69,15 +99,18 @@ export function filterLogs(logs: AuditLog[], filters: {
         // Search filter
         if (filters.search) {
             const searchLower = filters.search.toLowerCase();
+            const entityName = getEntityName(log);
+            const userName = getUserName(log);
             const matches =
-                log.entityName.toLowerCase().includes(searchLower) ||
-                log.description.toLowerCase().includes(searchLower) ||
-                log.actorName.toLowerCase().includes(searchLower);
+                entityName.toLowerCase().includes(searchLower) ||
+                (log.description || '').toLowerCase().includes(searchLower) ||
+                userName.toLowerCase().includes(searchLower) ||
+                log.resource_type.toLowerCase().includes(searchLower);
             if (!matches) return false;
         }
 
-        // Module filter
-        if (filters.module && log.module !== filters.module) {
+        // Resource type filter
+        if (filters.resource_type && log.resource_type !== filters.resource_type) {
             return false;
         }
 
@@ -88,7 +121,7 @@ export function filterLogs(logs: AuditLog[], filters: {
 
         // Date range filter
         if (filters.dateRange && filters.dateRange !== 'all') {
-            const logDate = new Date(log.timestamp);
+            const logDate = new Date(log.created_at);
             const now = new Date();
 
             switch (filters.dateRange) {
@@ -119,20 +152,23 @@ export function filterLogs(logs: AuditLog[], filters: {
  * Get color for action
  */
 export function getActionColor(action: string): string {
-    switch (action) {
-        case 'CREATE':
-            return 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20';
-        case 'UPDATE':
-            return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
-        case 'DELETE':
-            return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20';
-        case 'LOGIN':
-            return 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20';
-        case 'LOGOUT':
-            return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20';
-        default:
-            return 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20';
+    const actionLower = action.toLowerCase();
+    if (actionLower.includes('create') || actionLower.includes('add')) {
+        return 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20';
     }
+    if (actionLower.includes('update') || actionLower.includes('edit') || actionLower.includes('modify')) {
+        return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20';
+    }
+    if (actionLower.includes('delete') || actionLower.includes('remove')) {
+        return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20';
+    }
+    if (actionLower.includes('login') || actionLower.includes('signin')) {
+        return 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20';
+    }
+    if (actionLower.includes('logout') || actionLower.includes('signout')) {
+        return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20';
+    }
+    return 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20';
 }
 
 /**
@@ -142,3 +178,14 @@ export function formatJSON(data: unknown): string {
     if (!data) return 'No data';
     return JSON.stringify(data, null, 2);
 }
+
+/**
+ * Capitalize first letter of each word
+ */
+export function capitalizeWords(str: string): string {
+    return str
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+

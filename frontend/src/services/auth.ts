@@ -31,6 +31,17 @@ interface UserResponse {
         description?: string;
         permissions: any[];
     }>;
+    permissions: Array<{
+        id: number;
+        name: string;
+        description?: string;
+        resource: string;
+        action: string;
+    }>;
+}
+
+interface MessageResponse {
+    message: string;
 }
 
 /**
@@ -79,7 +90,16 @@ export async function me(): Promise<UserResponse> {
  */
 export async function refreshToken(): Promise<TokenResponse> {
     try {
-        const response = await http.post<TokenResponse>('/auth/refresh');
+        const refresh = localStorage.getItem('refresh_token');
+        if (!refresh) {
+            throw new Error('Missing refresh token');
+        }
+
+        const response = await http.post<TokenResponse>(
+            '/auth/refresh',
+            { refresh_token: refresh },
+            { skipAuth: true }
+        );
         
         // Update stored token
         localStorage.setItem('access_token', response.access_token);
@@ -100,6 +120,9 @@ export async function refreshToken(): Promise<TokenResponse> {
  * Logout user
  */
 export function logout(): void {
+    // Fire and forget server-side logout lifecycle endpoint.
+    http.post('/auth/logout', undefined, { skipAuth: true }).catch(() => undefined);
+
     // Clear stored tokens
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -118,4 +141,35 @@ export function isLoggedIn(): boolean {
  */
 export function getAccessToken(): string | null {
     return localStorage.getItem('access_token');
+}
+
+/**
+ * Request a password reset email.
+ * Always returns a generic response to avoid account enumeration.
+ */
+export async function requestPasswordReset(email: string): Promise<MessageResponse> {
+    return http.post<MessageResponse>(
+        '/auth/forgot-password',
+        { email },
+        { skipAuth: true }
+    );
+}
+
+/**
+ * Reset password using one-time token.
+ */
+export async function resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string
+): Promise<MessageResponse> {
+    return http.post<MessageResponse>(
+        '/auth/reset-password',
+        {
+            token,
+            new_password: newPassword,
+            confirm_password: confirmPassword,
+        },
+        { skipAuth: true }
+    );
 }

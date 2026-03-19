@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import check_permission
 from app.schemas.purchase import (
     PurchaseCreate,
     PurchaseUpdate,
@@ -24,7 +24,7 @@ async def list_purchases(
     status: str = Query(None),
     supplier_id: int = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("purchases:view"))
 ):
     """
     Retrieve purchases with pagination and filters.
@@ -49,51 +49,25 @@ async def list_purchases(
     )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PurchaseResponse, status_code=status.HTTP_201_CREATED)
 async def create_purchase(
     purchase_in: PurchaseCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("purchases:manage"))
 ):
     """
     Create new purchase order.
     """
     purchase_service = PurchaseService(db)
     purchase = await purchase_service.create(purchase_in, current_user.id)
-    
-    # Manually serialize to dict for debugging
-    from sqlalchemy import inspect
-    mapper = inspect(purchase)
-    result = {}
-    for column in mapper.attrs:
-        val = getattr(purchase, column.key)
-        if column.key == 'status':
-            result[column.key] = val.value if hasattr(val, 'value') else str(val)
-        elif column.key == 'items':
-            result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'received_quantity': item.received_quantity} for item in val]
-        elif column.key == 'supplier':
-            if val:
-                result[column.key] = {'id': val.id, 'name': val.name, 'code': val.code}
-            else:
-                result[column.key] = None
-        elif column.key == 'user':
-            if val:
-                result[column.key] = {'id': val.id, 'username': val.username}
-            else:
-                result[column.key] = None
-        elif hasattr(val, 'isoformat'):
-            result[column.key] = val.isoformat()
-        else:
-            result[column.key] = val
-    
-    return result
+    return purchase
 
 
 @router.get("/{purchase_id}", response_model=PurchaseResponse)
 async def get_purchase(
     purchase_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("purchases:view"))
 ):
     """
     Get purchase by ID.
@@ -115,7 +89,7 @@ async def update_purchase(
     purchase_id: int,
     purchase_in: PurchaseUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("purchases:manage"))
 ):
     """
     Update purchase.
@@ -137,7 +111,7 @@ async def update_purchase(
 async def delete_purchase(
     purchase_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("purchases:manage"))
 ):
     """
     Delete purchase.
@@ -162,12 +136,12 @@ async def delete_purchase(
     return MessageResponse(message="Purchase deleted successfully")
 
 
-@router.post("/{purchase_id}/receive")
+@router.post("/{purchase_id}/receive", response_model=PurchaseResponse)
 async def receive_purchase(
     purchase_id: int,
     receive_data: ReceivePurchaseRequest,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(check_permission("purchases:manage"))
 ):
     """
     Receive a purchase order and update inventory.
@@ -185,29 +159,4 @@ async def receive_purchase(
             detail="Purchase not found"
         )
     
-    # Return serialized dict instead of relying on response_model
-    from sqlalchemy import inspect
-    mapper = inspect(purchase)
-    result = {}
-    for column in mapper.attrs:
-        val = getattr(purchase, column.key)
-        if column.key == 'status':
-            result[column.key] = val.value if hasattr(val, 'value') else str(val)
-        elif column.key == 'items':
-            result[column.key] = [{'id': item.id, 'product_id': item.product_id, 'quantity': item.quantity, 'unit_price': item.unit_price, 'total_price': item.total_price, 'received_quantity': item.received_quantity} for item in val]
-        elif column.key == 'supplier':
-            if val:
-                result[column.key] = {'id': val.id, 'name': val.name, 'code': val.code}
-            else:
-                result[column.key] = None
-        elif column.key == 'user':
-            if val:
-                result[column.key] = {'id': val.id, 'username': val.username}
-            else:
-                result[column.key] = None
-        elif hasattr(val, 'isoformat'):
-            result[column.key] = val.isoformat()
-        else:
-            result[column.key] = val
-    
-    return result
+    return purchase
