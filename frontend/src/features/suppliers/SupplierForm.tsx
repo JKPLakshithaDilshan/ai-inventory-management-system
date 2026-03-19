@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import type { Resolver, SubmitHandler } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Dialog,
@@ -41,7 +42,8 @@ const supplierSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export type SupplierFormValues = z.infer<typeof supplierSchema>;
+export type SupplierFormInputValues = z.input<typeof supplierSchema>;
+export type SupplierFormValues = z.output<typeof supplierSchema>;
 
 interface SupplierFormProps {
   children: React.ReactNode;
@@ -63,8 +65,12 @@ export function SupplierForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const form = useForm<SupplierFormValues>({
-    resolver: zodResolver(supplierSchema),
+  const form = useForm<SupplierFormInputValues, unknown, SupplierFormValues>({
+    resolver: (zodResolver(supplierSchema) as Resolver<
+      SupplierFormInputValues,
+      unknown,
+      SupplierFormValues
+    >),
     defaultValues: {
       name: defaultValues?.name ?? '',
       code: defaultValues?.code ?? '',
@@ -108,7 +114,7 @@ export function SupplierForm({
     setSubmitError(null);
   }, [open, defaultValues, form]);
 
-  const handleSubmit = async (data: SupplierFormValues) => {
+  const handleSubmit: SubmitHandler<SupplierFormValues> = async (data) => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);

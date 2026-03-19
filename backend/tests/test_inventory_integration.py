@@ -443,7 +443,13 @@ async def test_concurrent_sale_completion_only_one_succeeds(session_factory, see
             SaleCreate(
                 warehouse_id=warehouse.id,
                 sale_date=date.today(),
-                items=[SaleItemCreate(product_id=product.id, quantity=7, unit_price=20.0)],
+                items=[
+                    SaleItemCreate(
+                        product_id=product.id,
+                        quantity=7,
+                        unit_price=20.0,
+                    )
+                ],
             ),
             user_id=user.id,
         )
@@ -451,7 +457,13 @@ async def test_concurrent_sale_completion_only_one_succeeds(session_factory, see
             SaleCreate(
                 warehouse_id=warehouse.id,
                 sale_date=date.today(),
-                items=[SaleItemCreate(product_id=product.id, quantity=7, unit_price=20.0)],
+                items=[
+                    SaleItemCreate(
+                        product_id=product.id,
+                        quantity=7,
+                        unit_price=20.0,
+                    )
+                ],
             ),
             user_id=user.id,
         )
@@ -476,7 +488,9 @@ async def test_concurrent_sale_completion_only_one_succeeds(session_factory, see
     outcomes = [result_a, result_b]
     assert outcomes.count("success") == 1
 
-    failures = [outcome for outcome in outcomes if outcome != "success"]
+    failures = [
+        outcome for outcome in outcomes if outcome != "success"
+    ]
     assert len(failures) == 1
     assert isinstance(failures[0], HTTPException)
     assert failures[0].status_code == 400
@@ -484,19 +498,26 @@ async def test_concurrent_sale_completion_only_one_succeeds(session_factory, see
     # Verify final stock and statuses.
     async with session_factory() as verify_session:
         qty = await _get_location_qty(verify_session, product.id, warehouse.id)
-        assert qty == 3  # 10 baseline - 7 from exactly one successful completion
+        # 10 baseline - 7 from exactly one successful completion
+        assert qty == 3
 
         completed_count = await verify_session.scalar(
-            select(func.count(Sale.id)).where(Sale.status == SaleStatus.COMPLETED)
+            select(func.count(Sale.id)).where(
+                Sale.status == SaleStatus.COMPLETED
+            )
         )
         draft_count = await verify_session.scalar(
-            select(func.count(Sale.id)).where(Sale.status == SaleStatus.DRAFT)
+            select(func.count(Sale.id)).where(
+                Sale.status == SaleStatus.DRAFT
+            )
         )
 
         assert completed_count == 1
         assert draft_count == 1
 
         sale_ledger_count = await verify_session.scalar(
-            select(func.count(StockLedger.id)).where(StockLedger.reference_type == "sale")
+            select(func.count(StockLedger.id)).where(
+                StockLedger.reference_type == "sale"
+            )
         )
         assert sale_ledger_count == 1

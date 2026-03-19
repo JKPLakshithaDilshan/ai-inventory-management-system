@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import type { Resolver, SubmitHandler } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Dialog,
@@ -62,8 +63,12 @@ export function ProductForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+  const form = useForm<ProductFormValues, unknown, ProductFormValues>({
+    resolver: (zodResolver(productSchema) as Resolver<
+      ProductFormValues,
+      unknown,
+      ProductFormValues
+    >),
     defaultValues: {
       sku: defaultValues?.sku ?? '',
       name: defaultValues?.name ?? '',
@@ -99,7 +104,7 @@ export function ProductForm({
     setSubmitError(null);
   }, [open, defaultValues, form]);
 
-  const handleSubmit = async (data: ProductFormValues) => {
+  const handleSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);

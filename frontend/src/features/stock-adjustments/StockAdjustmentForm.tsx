@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import type { Resolver, SubmitHandler } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Dialog,
@@ -42,7 +43,8 @@ const schema = z.object({
   allow_negative: z.boolean().default(false),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormInputValues = z.input<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 interface StockAdjustmentFormProps {
   children: React.ReactNode;
@@ -64,8 +66,8 @@ export function StockAdjustmentForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const form = useForm<FormInputValues, unknown, FormValues>({
+    resolver: zodResolver(schema) as Resolver<FormInputValues, unknown, FormValues>,
     defaultValues: {
       product_id: 0,
       warehouse_id: 0,
@@ -98,7 +100,7 @@ export function StockAdjustmentForm({
 
   const canShowStock = useMemo(() => selectedProductId > 0 && selectedWarehouseId > 0, [selectedProductId, selectedWarehouseId]);
 
-  const handleSubmit = async (values: FormValues) => {
+  const handleSubmit: SubmitHandler<FormValues> = async (values) => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);

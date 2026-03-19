@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import type { Resolver, SubmitHandler } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Dialog,
@@ -37,6 +38,7 @@ const schema = z.object({
 });
 
 export type CustomerFormValues = z.infer<typeof schema>;
+type CustomerFormInputValues = z.input<typeof schema>;
 
 interface CustomerFormProps {
   children: React.ReactNode;
@@ -58,8 +60,12 @@ export function CustomerForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(schema),
+  const form = useForm<CustomerFormInputValues, unknown, CustomerFormValues>({
+    resolver: (zodResolver(schema) as Resolver<
+      CustomerFormInputValues,
+      unknown,
+      CustomerFormValues
+    >),
     defaultValues: {
       customer_code: defaultValues?.customer_code ?? '',
       full_name: defaultValues?.full_name ?? '',
@@ -93,7 +99,7 @@ export function CustomerForm({
     setSubmitError(null);
   }, [open, defaultValues, form]);
 
-  const handleSubmit = async (data: CustomerFormValues) => {
+  const handleSubmit: SubmitHandler<CustomerFormValues> = async (data) => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);

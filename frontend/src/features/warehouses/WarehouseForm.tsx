@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import type { Resolver, SubmitHandler } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Dialog,
@@ -33,7 +34,8 @@ const warehouseSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export type WarehouseFormValues = z.infer<typeof warehouseSchema>;
+export type WarehouseFormInputValues = z.input<typeof warehouseSchema>;
+export type WarehouseFormValues = z.output<typeof warehouseSchema>;
 
 interface WarehouseFormProps {
   children: React.ReactNode;
@@ -55,8 +57,12 @@ export function WarehouseForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const form = useForm<WarehouseFormValues>({
-    resolver: zodResolver(warehouseSchema),
+  const form = useForm<WarehouseFormInputValues, unknown, WarehouseFormValues>({
+    resolver: (zodResolver(warehouseSchema) as Resolver<
+      WarehouseFormInputValues,
+      unknown,
+      WarehouseFormValues
+    >),
     defaultValues: {
       name: defaultValues?.name ?? '',
       code: defaultValues?.code ?? '',
@@ -84,7 +90,7 @@ export function WarehouseForm({
     setSubmitError(null);
   }, [open, defaultValues, form]);
 
-  const handleSubmit = async (data: WarehouseFormValues) => {
+  const handleSubmit: SubmitHandler<WarehouseFormValues> = async (data) => {
     try {
       setIsSubmitting(true);
       setSubmitError(null);
