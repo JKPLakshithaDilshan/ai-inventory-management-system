@@ -14,15 +14,26 @@ from app.services.base_service import BaseService
 from app.services.stock_ledger_service import StockLedgerService
 
 
-class StockAdjustmentService(BaseService[StockAdjustment, StockAdjustmentCreate, dict]):
+class StockAdjustmentService(
+    BaseService[StockAdjustment, StockAdjustmentCreate, dict]
+):
     """Service for stock adjustments with stock-safe mutations."""
 
     def __init__(self, db: AsyncSession):
         super().__init__(StockAdjustment, db)
 
-    async def create_adjustment(self, payload: StockAdjustmentCreate, actor_id: Optional[int]) -> StockAdjustment:
-        """Create adjustment and apply stock change via stock ledger gateway."""
-        qty_delta = payload.quantity if payload.adjustment_type == "increase" else -payload.quantity
+    async def create_adjustment(
+        self,
+        payload: StockAdjustmentCreate,
+        actor_id: Optional[int],
+    ) -> StockAdjustment:
+        """Create adjustment and apply stock change via stock ledger
+        gateway."""
+        qty_delta = (
+            payload.quantity
+            if payload.adjustment_type == "increase"
+            else -payload.quantity
+        )
 
         adjustment = StockAdjustment(
             product_id=payload.product_id,
@@ -58,7 +69,8 @@ class StockAdjustmentService(BaseService[StockAdjustment, StockAdjustmentCreate,
         return adjustment
 
     async def get_current_stock(self, product_id: int, warehouse_id: int) -> int:
-        """Get current product stock in the given warehouse location."""
+        """Get current product stock in the given warehouse
+        location."""
         result = await self.db.execute(
             select(ProductLocation.quantity).where(
                 ProductLocation.product_id == product_id,
@@ -68,7 +80,9 @@ class StockAdjustmentService(BaseService[StockAdjustment, StockAdjustmentCreate,
         qty = result.scalar_one_or_none()
         return qty or 0
 
-    async def has_reference_conflict(self, adjustment_reference: Optional[str]) -> bool:
+    async def has_reference_conflict(
+        self, adjustment_reference: Optional[str]
+    ) -> bool:
         """Check adjustment reference uniqueness if present."""
         if not adjustment_reference:
             return False
@@ -99,7 +113,10 @@ class StockAdjustmentService(BaseService[StockAdjustment, StockAdjustmentCreate,
         if warehouse_id:
             query = query.where(StockAdjustment.warehouse_id == warehouse_id)
         if adjustment_type:
-            query = query.where(StockAdjustment.adjustment_type == StockAdjustmentType(adjustment_type))
+            query = query.where(
+                StockAdjustment.adjustment_type
+                == StockAdjustmentType(adjustment_type)
+            )
         if date_from:
             query = query.where(StockAdjustment.created_at >= date_from)
         if date_to:
@@ -108,7 +125,11 @@ class StockAdjustmentService(BaseService[StockAdjustment, StockAdjustmentCreate,
         count_query = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(count_query)
 
-        query = query.order_by(StockAdjustment.created_at.desc()).offset(skip).limit(limit)
+        query = (
+            query.order_by(StockAdjustment.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.db.execute(query)
 
         return result.scalars().all(), total or 0
