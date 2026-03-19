@@ -1,7 +1,9 @@
 """Stock Ledger Service - Centralized stock mutation gateway."""
 
+from datetime import datetime
 from typing import Optional
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
@@ -153,6 +155,10 @@ class StockLedgerService:
         product_id: Optional[int] = None,
         warehouse_id: Optional[int] = None,
         transaction_type: Optional[StockTransactionType] = None,
+        reference_type: Optional[str] = None,
+        reference_id: Optional[int] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
         page: int = 1,
         page_size: int = 50
     ) -> tuple[list[StockLedger], int]:
@@ -164,13 +170,20 @@ class StockLedgerService:
             product_id: Filter by product
             warehouse_id: Filter by warehouse
             transaction_type: Filter by transaction type
+            reference_type: Filter by reference type
+            reference_id: Filter by reference id
+            date_from: Filter by created_at >= date_from
+            date_to: Filter by created_at <= date_to
             page: Page number (1-indexed)
             page_size: Items per page
             
         Returns:
             tuple: (list of ledger entries, total count)
         """
-        query = select(StockLedger)
+        query = select(StockLedger).options(
+            selectinload(StockLedger.product),
+            selectinload(StockLedger.warehouse),
+        )
         
         # Apply filters
         if product_id:
@@ -179,6 +192,14 @@ class StockLedgerService:
             query = query.where(StockLedger.warehouse_id == warehouse_id)
         if transaction_type:
             query = query.where(StockLedger.type == transaction_type)
+        if reference_type:
+            query = query.where(StockLedger.reference_type == reference_type)
+        if reference_id:
+            query = query.where(StockLedger.reference_id == reference_id)
+        if date_from:
+            query = query.where(StockLedger.created_at >= date_from)
+        if date_to:
+            query = query.where(StockLedger.created_at <= date_to)
         
         # Get total count
         count_query = select(func.count()).select_from(query.subquery())
@@ -197,3 +218,17 @@ class StockLedgerService:
         entries = result.scalars().all()
         
         return list(entries), total
+
+    @staticmethod
+    async def get_entry_by_id(db: AsyncSession, entry_id: int) -> Optional[StockLedger]:
+        """Get a single stock ledger entry by ID with related product and warehouse."""
+        query = (
+            select(StockLedger)
+            .where(StockLedger.id == entry_id)
+            .options(
+                selectinload(StockLedger.product),
+                selectinload(StockLedger.warehouse),
+            )
+        )
+        result = await db.execute(query)
+        return result.scalar_one_or_none()

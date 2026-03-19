@@ -50,6 +50,12 @@ class RoleResponse(RoleBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RoleOption(BaseModel):
+    """Minimal role option schema for dropdown/select lists."""
+    id: int
+    role_name: str
+
+
 # User Schemas
 class UserBase(BaseModel):
     """Base user schema."""

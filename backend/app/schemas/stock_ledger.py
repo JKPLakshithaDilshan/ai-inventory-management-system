@@ -1,6 +1,6 @@
 """StockLedger schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from typing import Optional
 from datetime import datetime
 
@@ -42,6 +42,30 @@ class StockLedgerResponse(StockLedgerBase):
     id: int
     created_by: Optional[int] = None
     created_at: datetime
+
+    class ProductSummary(BaseModel):
+        id: int
+        sku: str
+        name: str
+
+        class Config:
+            from_attributes = True
+
+    class WarehouseSummary(BaseModel):
+        id: int
+        code: str
+        name: str
+
+        class Config:
+            from_attributes = True
+
+    product: Optional[ProductSummary] = None
+    warehouse: Optional[WarehouseSummary] = None
+
+    @field_serializer("type")
+    def serialize_type(self, value: StockTransactionType) -> str:
+        """Return enum name (IN/OUT/ADJUST/TRANSFER) for frontend compatibility."""
+        return value.name
 
     class Config:
         from_attributes = True

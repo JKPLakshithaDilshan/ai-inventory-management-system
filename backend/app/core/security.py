@@ -1,6 +1,6 @@
 """Security utilities for authentication and authorization."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -57,14 +57,25 @@ def create_access_token(
     Returns:
         str: Encoded JWT token
     """
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = now + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    
-    to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
+
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "access",
+        "iat": now,
+    }
+    if settings.JWT_ISSUER:
+        to_encode["iss"] = settings.JWT_ISSUER
+    if settings.JWT_AUDIENCE:
+        to_encode["aud"] = settings.JWT_AUDIENCE
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -78,10 +89,21 @@ def create_refresh_token(subject: Union[str, Any]) -> str:
     Returns:
         str: Encoded JWT refresh token
     """
+    now = datetime.now(timezone.utc)
     expires_delta = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    expire = datetime.utcnow() + expires_delta
-    
-    to_encode = {"exp": expire, "sub": str(subject), "type": "refresh"}
+    expire = now + expires_delta
+
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": "refresh",
+        "iat": now,
+    }
+    if settings.JWT_ISSUER:
+        to_encode["iss"] = settings.JWT_ISSUER
+    if settings.JWT_AUDIENCE:
+        to_encode["aud"] = settings.JWT_AUDIENCE
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -96,11 +118,15 @@ def decode_token(token: str) -> Optional[dict]:
         Optional[dict]: Decoded token payload or None if invalid
     """
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
-        )
+        decode_options: dict[str, Any] = {
+            "algorithms": [settings.ALGORITHM],
+        }
+        if settings.JWT_AUDIENCE:
+            decode_options["audience"] = settings.JWT_AUDIENCE
+        if settings.JWT_ISSUER:
+            decode_options["issuer"] = settings.JWT_ISSUER
+
+        payload = jwt.decode(token, settings.SECRET_KEY, **decode_options)
         return payload
     except JWTError:
         return None
