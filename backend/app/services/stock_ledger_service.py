@@ -120,15 +120,17 @@ class StockLedgerService:
                     status_code=400,
                     detail=(
                         f"Insufficient stock at warehouse {warehouse.name}. "
-                        f"Available: {location_qty_before}, Requested: {abs(qty_delta)}"
+                        f"Available: {location_qty_before}, "
+                        f"Requested: {abs(qty_delta)}"
                     ),
                 )
             if product_qty_after < 0:
                 raise HTTPException(
                     status_code=400,
                     detail=(
-                        f"Insufficient total stock for product {product.name}. "
-                        f"Available: {product_qty_before}, Requested: {abs(qty_delta)}"
+                        f"Insufficient total stock for product {product.name}."
+                        f" Available: {product_qty_before}, "
+                        f"Requested: {abs(qty_delta)}"
                     ),
                 )
 

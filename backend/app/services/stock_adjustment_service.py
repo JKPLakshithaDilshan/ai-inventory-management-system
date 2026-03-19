@@ -68,7 +68,9 @@ class StockAdjustmentService(
         await self.db.refresh(adjustment)
         return adjustment
 
-    async def get_current_stock(self, product_id: int, warehouse_id: int) -> int:
+    async def get_current_stock(
+        self, product_id: int, warehouse_id: int
+    ) -> int:
         """Get current product stock in the given warehouse
         location."""
         result = await self.db.execute(

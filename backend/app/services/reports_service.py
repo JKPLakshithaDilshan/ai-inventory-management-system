@@ -74,7 +74,11 @@ class ReportsService:
                 "product_id": product.id,
                 "sku": product.sku,
                 "name": product.name,
-                "category": product.category.name if product.category else None,
+                "category": (
+                    product.category.name
+                    if product.category
+                    else None
+                ),
                 "quantity": warehouse_qty,
                 "unit": product.unit,
                 "cost_price": float(product.cost_price),
@@ -112,7 +116,9 @@ class ReportsService:
 
         # Product filter requires join
         if product_id:
-            query = query.join(SaleItem).where(SaleItem.product_id == product_id)
+            query = query.join(SaleItem).where(
+                SaleItem.product_id == product_id
+            )
 
         # Get total count
         count_query = select(func.count(Sale.id)).select_from(query.subquery())
@@ -174,7 +180,11 @@ class ReportsService:
         Returns list of purchases with totals and summary.
         """
         # Build query
-        query = select(Purchase).where(Purchase.status.in_([PurchaseStatus.RECEIVED, PurchaseStatus.APPROVED]))
+        query = select(Purchase).where(
+            Purchase.status.in_(
+                [PurchaseStatus.RECEIVED, PurchaseStatus.APPROVED]
+            )
+        )
 
         if date_from:
             query = query.where(Purchase.purchase_date >= date_from)
@@ -185,10 +195,15 @@ class ReportsService:
 
         # Product filter requires join
         if product_id:
-            query = query.join(PurchaseItem).where(PurchaseItem.product_id == product_id)
+            query = query.join(PurchaseItem).where(
+                PurchaseItem.product_id == product_id
+            )
 
         # Get total count
-        count_query = select(func.count(Purchase.id)).select_from(query.subquery())
+        count_query = (
+            select(func.count(Purchase.id))
+            .select_from(query.subquery())
+        )
         total_result = await self.db.execute(count_query)
         total = total_result.scalar_one()
 
@@ -208,7 +223,11 @@ class ReportsService:
         }
 
         # Apply pagination and ordering
-        query = query.order_by(desc(Purchase.purchase_date)).offset(skip).limit(limit)
+        query = (
+            query.order_by(desc(Purchase.purchase_date))
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.db.execute(query)
         purchases = result.scalars().all()
 
@@ -220,11 +239,19 @@ class ReportsService:
                 "purchase_number": purchase.purchase_number,
                 "purchase_date": purchase.purchase_date.isoformat(),
                 "supplier_id": purchase.supplier_id,
-                "supplier_name": purchase.supplier.name if purchase.supplier else None,
+                "supplier_name": (
+                    purchase.supplier.name
+                    if purchase.supplier
+                    else None
+                ),
                 "total_amount": float(purchase.total_amount),
                 "tax_amount": float(purchase.tax_amount or 0),
                 "status": purchase.status.value,
-                "received_date": purchase.received_date.isoformat() if purchase.received_date else None,
+                "received_date": (
+                    purchase.received_date.isoformat()
+                    if purchase.received_date
+                    else None
+                ),
             })
 
         return report_data, total, summary
@@ -265,9 +292,15 @@ class ReportsService:
         # Get summary statistics
         summary_query = select(
             func.count(StockLedger.id).label("total_movements"),
-            func.sum(func.abs(StockLedger.qty_change)).label("total_units_moved"),
-            func.count(StockLedger.id).filter(StockLedger.qty_change > 0).label("total_inbound"),
-            func.count(StockLedger.id).filter(StockLedger.qty_change < 0).label("total_outbound")
+            func.sum(func.abs(StockLedger.qty_change)).label(
+                "total_units_moved"
+            ),
+            func.count(StockLedger.id).filter(
+                StockLedger.qty_change > 0
+            ).label("total_inbound"),
+            func.count(StockLedger.id).filter(
+                StockLedger.qty_change < 0
+            ).label("total_outbound")
         ).select_from(query.subquery())
         summary_result = await self.db.execute(summary_query)
         summary_row = summary_result.one()
@@ -280,7 +313,11 @@ class ReportsService:
         }
 
         # Apply pagination and ordering
-        query = query.order_by(desc(StockLedger.created_at)).offset(skip).limit(limit)
+        query = (
+            query.order_by(desc(StockLedger.created_at))
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.db.execute(query)
         movements = result.scalars().all()
 
@@ -291,9 +328,17 @@ class ReportsService:
                 "ledger_id": movement.id,
                 "created_at": movement.created_at.isoformat(),
                 "product_id": movement.product_id,
-                "product_name": movement.product.name if movement.product else None,
+                "product_name": (
+                    movement.product.name
+                    if movement.product
+                    else None
+                ),
                 "warehouse_id": movement.warehouse_id,
-                "warehouse_name": movement.warehouse.name if movement.warehouse else None,
+                "warehouse_name": (
+                    movement.warehouse.name
+                    if movement.warehouse
+                    else None
+                ),
                 "type": movement.type.value,
                 "qty_change": movement.qty_change,
                 "qty_before": movement.qty_before,
@@ -325,7 +370,9 @@ class ReportsService:
         if not fields:
             fields = list(data[0].keys())
 
-        writer = csv.DictWriter(output, fieldnames=fields, extrasaction='ignore')
+        writer = csv.DictWriter(
+            output, fieldnames=fields, extrasaction='ignore'
+        )
         writer.writeheader()
         writer.writerows(data)
 
