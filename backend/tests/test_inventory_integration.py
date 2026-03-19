@@ -373,7 +373,13 @@ async def test_sale_completion_fails_when_stock_insufficient(db_session: AsyncSe
         SaleCreate(
             warehouse_id=warehouse.id,
             sale_date=date.today(),
-            items=[SaleItemCreate(product_id=product.id, quantity=999, unit_price=20.0)],
+            items=[
+                SaleItemCreate(
+                    product_id=product.id,
+                    quantity=999,
+                    unit_price=20.0,
+                )
+            ],
         ),
         user_id=user.id,
     )
@@ -393,7 +399,10 @@ async def test_sale_completion_fails_when_stock_insufficient(db_session: AsyncSe
 
 
 @pytest.mark.asyncio
-async def test_adjustment_decrease_fails_without_allow_negative(db_session: AsyncSession, seed_core_entities):
+async def test_adjustment_decrease_fails_without_allow_negative(
+    db_session: AsyncSession,
+    seed_core_entities,
+):
     user = seed_core_entities["user"]
     warehouse = seed_core_entities["warehouse"]
     product = seed_core_entities["product"]
@@ -422,12 +431,19 @@ async def test_adjustment_decrease_fails_without_allow_negative(db_session: Asyn
     qty = await _get_location_qty(db_session, product.id, warehouse.id)
     assert qty == 10
 
-    no_entries = await _ledger_entries_for_reference(db_session, "stock_adjustment", 1)
+    no_entries = await _ledger_entries_for_reference(
+        db_session,
+        "stock_adjustment",
+        1,
+    )
     assert len(no_entries) == 0
 
 
 @pytest.mark.asyncio
-async def test_concurrent_sale_completion_only_one_succeeds(session_factory, seed_core_entities):
+async def test_concurrent_sale_completion_only_one_succeeds(
+    session_factory,
+    seed_core_entities,
+):
     """Concurrent edge case:
     two draft sales consume the same stock; only one completion should succeed.
     """
