@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Trash2, Plus, Eye, Pencil } from 'lucide-react';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -67,7 +67,7 @@ export function UsersPage() {
     });
     const { toast } = useToast();
 
-    const loadUsers = async (page = 1) => {
+    const loadUsers = useCallback(async (page = 1) => {
         setIsLoading(true);
         try {
             const skip = (page - 1) * 100;
@@ -78,7 +78,7 @@ export function UsersPage() {
                 pageSize: response.page_size,
                 total: response.total,
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: 'Error',
                 description: 'Failed to load users',
@@ -87,9 +87,9 @@ export function UsersPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [toast]);
 
-    const loadAuthzData = async () => {
+    const loadAuthzData = useCallback(async () => {
         try {
             const [roleData, permissionData] = await Promise.all([getRoles(), getPermissions()]);
             setRoles(roleData || []);
@@ -101,7 +101,7 @@ export function UsersPage() {
                 variant: 'destructive',
             });
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -110,7 +110,7 @@ export function UsersPage() {
         } else {
             setIsLoading(false);
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, loadUsers, loadAuthzData]);
 
     const openCreateRoleDialog = () => {
         setEditingRole(null);
@@ -167,10 +167,10 @@ export function UsersPage() {
 
             setRoleDialogOpen(false);
             await loadAuthzData();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: 'Role save failed',
-                description: error?.message || 'Could not save role',
+                description: error instanceof Error ? error.message : 'Could not save role',
                 variant: 'destructive',
             });
         } finally {
@@ -188,7 +188,7 @@ export function UsersPage() {
                 title: 'Success',
                 description: 'User deleted successfully',
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: 'Error',
                 description: 'Failed to delete user',

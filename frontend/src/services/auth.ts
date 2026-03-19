@@ -8,7 +8,7 @@ import { http } from './http';
 /**
  * Token response from backend
  */
-interface TokenResponse {
+export interface TokenResponse {
     access_token: string;
     refresh_token: string;
     token_type: string;
@@ -17,7 +17,22 @@ interface TokenResponse {
 /**
  * User information response from backend
  */
-interface UserResponse {
+export interface UserPermissionResponse {
+    id: number;
+    name: string;
+    description?: string;
+    resource: string;
+    action: string;
+}
+
+export interface UserRoleResponse {
+    id: number;
+    name: string;
+    description?: string;
+    permissions: UserPermissionResponse[];
+}
+
+export interface UserResponse {
     id: number;
     email: string;
     username: string;
@@ -25,19 +40,8 @@ interface UserResponse {
     is_active: boolean;
     is_superuser: boolean;
     created_at: string;
-    roles: Array<{
-        id: number;
-        name: string;
-        description?: string;
-        permissions: any[];
-    }>;
-    permissions: Array<{
-        id: number;
-        name: string;
-        description?: string;
-        resource: string;
-        action: string;
-    }>;
+    roles: UserRoleResponse[];
+    permissions: UserPermissionResponse[];
 }
 
 interface MessageResponse {

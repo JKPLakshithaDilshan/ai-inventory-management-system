@@ -36,7 +36,7 @@ export interface CreateWarehouseInput {
     is_active?: boolean;
 }
 
-export interface WarehouseUpdateInput extends Partial<CreateWarehouseInput> {}
+export type WarehouseUpdateInput = Partial<CreateWarehouseInput>;
 
 /**
  * Warehouse API endpoints

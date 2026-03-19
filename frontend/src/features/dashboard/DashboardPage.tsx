@@ -65,8 +65,8 @@ export function DashboardPage() {
             setRecentSales(salesRes.items || []);
             setReorderSuggestions(reorderRes.suggestions.slice(0, 5) || []);
             setSlowMovingStock(slowMovingRes.items.slice(0, 5) || []);
-        } catch (err: any) {
-            setError(err?.message || 'Failed to load dashboard data');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
         } finally {
             setIsLoading(false);
         }

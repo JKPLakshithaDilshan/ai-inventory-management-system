@@ -151,7 +151,14 @@ export default function AuditLogsPage() {
                                 </SelectContent>
                             </Select>
 
-                            <Select value={selectedDateRange} onValueChange={(v) => setSelectedDateRange(v as any)}>
+                            <Select
+                                value={selectedDateRange}
+                                onValueChange={(v) =>
+                                    setSelectedDateRange(
+                                        v as 'today' | '7days' | '30days' | 'all'
+                                    )
+                                }
+                            >
                                 <SelectTrigger className="w-[150px]">
                                     <SelectValue placeholder="Date Range" />
                                 </SelectTrigger>

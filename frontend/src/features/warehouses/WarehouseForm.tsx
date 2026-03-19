@@ -56,7 +56,7 @@ export function WarehouseForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<WarehouseFormValues>({
-    resolver: zodResolver(warehouseSchema) as any,
+    resolver: zodResolver(warehouseSchema),
     defaultValues: {
       name: defaultValues?.name ?? '',
       code: defaultValues?.code ?? '',
@@ -121,7 +121,7 @@ export function WarehouseForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit as any)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {submitError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {submitError}
@@ -130,7 +130,7 @@ export function WarehouseForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -144,7 +144,7 @@ export function WarehouseForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="code"
                 render={({ field }) => (
                   <FormItem>
@@ -160,7 +160,7 @@ export function WarehouseForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="city"
                 render={({ field }) => (
                   <FormItem>
@@ -174,7 +174,7 @@ export function WarehouseForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="contact_person"
                 render={({ field }) => (
                   <FormItem>
@@ -189,7 +189,7 @@ export function WarehouseForm({
             </div>
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="address"
               render={({ field }) => (
                 <FormItem>
@@ -204,7 +204,7 @@ export function WarehouseForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -218,7 +218,7 @@ export function WarehouseForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
@@ -233,7 +233,7 @@ export function WarehouseForm({
             </div>
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="is_active"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

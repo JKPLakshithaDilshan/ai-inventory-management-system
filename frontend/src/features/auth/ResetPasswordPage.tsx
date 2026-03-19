@@ -56,8 +56,11 @@ export function ResetPasswordPage() {
         try {
             await resetPassword(token, newPassword, confirmPassword);
             setSuccess(true);
-        } catch (err: any) {
-            const message = err?.message || 'Unable to reset password right now.';
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : 'Unable to reset password right now.';
             setError(message.replace(/^\[\d+\]\s*/, ''));
         } finally {
             setLoading(false);

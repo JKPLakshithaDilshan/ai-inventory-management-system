@@ -64,7 +64,21 @@ export function AIForecastPage() {
     const chartData = forecastData ? getCombinedChartData(forecastData) : [];
 
     // Custom tooltip for chart
-    const CustomTooltip = ({ active, payload }: any) => {
+    type ForecastTooltipPayload = {
+        date: string;
+        actual?: number;
+        forecast?: number;
+        confidenceLow?: number;
+        confidenceHigh?: number;
+    };
+
+    const CustomTooltip = ({
+        active,
+        payload,
+    }: {
+        active?: boolean;
+        payload?: Array<{ payload: ForecastTooltipPayload }>;
+    }) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (

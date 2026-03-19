@@ -34,7 +34,7 @@ export interface CustomerCreateInput {
   notes?: string;
 }
 
-export interface CustomerUpdateInput extends Partial<CustomerCreateInput> {}
+export type CustomerUpdateInput = Partial<CustomerCreateInput>;
 
 export interface CustomerListParams {
   skip?: number;

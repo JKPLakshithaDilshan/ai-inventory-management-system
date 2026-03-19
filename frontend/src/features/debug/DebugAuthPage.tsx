@@ -8,7 +8,7 @@ import { CheckCircle2, XCircle, RefreshCw, User } from 'lucide-react';
 
 export function DebugAuthPage() {
     const { isAuthenticated, user, token, logout } = useAuthStore();
-    const [meResponse, setMeResponse] = useState<any>(null);
+    const [meResponse, setMeResponse] = useState<Awaited<ReturnType<typeof me>> | null>(null);
     const [meError, setMeError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -20,8 +20,8 @@ export function DebugAuthPage() {
         try {
             const response = await me();
             setMeResponse(response);
-        } catch (error: any) {
-            setMeError(error.message || 'Failed to call /auth/me');
+        } catch (error: unknown) {
+            setMeError(error instanceof Error ? error.message : 'Failed to call /auth/me');
         } finally {
             setLoading(false);
         }

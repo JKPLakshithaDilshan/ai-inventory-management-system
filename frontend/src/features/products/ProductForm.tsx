@@ -63,7 +63,7 @@ export function ProductForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema) as any,
+    resolver: zodResolver(productSchema),
     defaultValues: {
       sku: defaultValues?.sku ?? '',
       name: defaultValues?.name ?? '',
@@ -140,7 +140,7 @@ export function ProductForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit as any)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {submitError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {submitError}
@@ -149,7 +149,7 @@ export function ProductForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="sku"
                 render={({ field }) => (
                   <FormItem>
@@ -163,7 +163,7 @@ export function ProductForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -178,7 +178,7 @@ export function ProductForm({
             </div>
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
@@ -193,7 +193,7 @@ export function ProductForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
@@ -214,7 +214,7 @@ export function ProductForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="unit"
                 render={({ field }) => (
                   <FormItem>
@@ -230,7 +230,7 @@ export function ProductForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="cost_price"
                 render={({ field }) => (
                   <FormItem>
@@ -244,7 +244,7 @@ export function ProductForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="selling_price"
                 render={({ field }) => (
                   <FormItem>
@@ -260,7 +260,7 @@ export function ProductForm({
 
             <div className="grid grid-cols-3 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
@@ -274,7 +274,7 @@ export function ProductForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="reorder_level"
                 render={({ field }) => (
                   <FormItem>
@@ -288,7 +288,7 @@ export function ProductForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="reorder_quantity"
                 render={({ field }) => (
                   <FormItem>
@@ -304,7 +304,7 @@ export function ProductForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="barcode"
                 render={({ field }) => (
                   <FormItem>
@@ -318,7 +318,7 @@ export function ProductForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="image_url"
                 render={({ field }) => (
                   <FormItem>

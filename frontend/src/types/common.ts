@@ -28,7 +28,7 @@ export interface PaginatedResponse<T> {
  * Standard error response from backend
  */
 export interface ErrorResponse {
-    detail: string | Record<string, any>;
+    detail: string | Record<string, unknown>;
     status_code?: number;
     message?: string;
 }
@@ -38,7 +38,7 @@ export interface ErrorResponse {
  */
 export interface ApiRequestOptions {
     headers?: Record<string, string>;
-    params?: Record<string, any>;
+    params?: Record<string, unknown>;
 }
 
 /**

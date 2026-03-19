@@ -41,9 +41,9 @@ export function LoginPage() {
             
             // On success, navigate to dashboard
             navigate('/dashboard', { replace: true });
-        } catch (err: any) {
+        } catch (err: unknown) {
             // Error is already set in store, but format it nicely
-            const message = err.message || 'Login failed';
+            const message = err instanceof Error ? err.message : 'Login failed';
             
             if (message.includes('[401]') || message.includes('Invalid') || message.includes('Incorrect')) {
                 setLocalError('Invalid username or password');

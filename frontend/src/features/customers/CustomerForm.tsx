@@ -59,7 +59,7 @@ export function CustomerForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema),
     defaultValues: {
       customer_code: defaultValues?.customer_code ?? '',
       full_name: defaultValues?.full_name ?? '',
@@ -132,7 +132,7 @@ export function CustomerForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit as any)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {submitError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {submitError}
@@ -141,7 +141,7 @@ export function CustomerForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="customer_code"
                 render={({ field }) => (
                   <FormItem>
@@ -154,7 +154,7 @@ export function CustomerForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="full_name"
                 render={({ field }) => (
                   <FormItem>
@@ -170,7 +170,7 @@ export function CustomerForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="company_name"
                 render={({ field }) => (
                   <FormItem>
@@ -183,7 +183,7 @@ export function CustomerForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="customer_type"
                 render={({ field }) => (
                   <FormItem>
@@ -206,7 +206,7 @@ export function CustomerForm({
 
             <div className="grid grid-cols-3 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
@@ -219,7 +219,7 @@ export function CustomerForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -232,7 +232,7 @@ export function CustomerForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="credit_limit"
                 render={({ field }) => (
                   <FormItem>
@@ -254,7 +254,7 @@ export function CustomerForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="city"
                 render={({ field }) => (
                   <FormItem>
@@ -267,7 +267,7 @@ export function CustomerForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -282,7 +282,7 @@ export function CustomerForm({
             </div>
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
@@ -296,7 +296,7 @@ export function CustomerForm({
             />
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="is_active"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

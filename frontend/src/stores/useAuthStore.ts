@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ROLES, ROLE_PERMISSIONS, type Role, type User } from '@/lib/rbac';
+import {
+    ROLES,
+    ROLE_PERMISSIONS,
+    PERMISSIONS,
+    type Role,
+    type User,
+    type Permission,
+} from '@/lib/rbac';
 import { login as apiLogin, me as apiMe, logout as apiLogout, refreshToken as apiRefreshToken } from '@/services/auth';
 
 interface AuthState {
@@ -20,6 +27,14 @@ interface AuthState {
 }
 
 const DEV_MODE = import.meta.env.DEV;
+const VALID_PERMISSIONS = new Set<string>(Object.values(PERMISSIONS));
+
+const toPermission = (permissionName: string): Permission | null => {
+    if (VALID_PERMISSIONS.has(permissionName)) {
+        return permissionName as Permission;
+    }
+    return null;
+};
 
 // Mock users for development only
 const MOCK_USERS: Record<Role, User> = {
@@ -99,7 +114,9 @@ export const useAuthStore = create<AuthState>()(
                         name: userResponse.full_name || userResponse.username || userResponse.email,
                         email: userResponse.email,
                         role: userRole,
-                        permissions: (userResponse.permissions || []).map((p) => p.name as any),
+                        permissions: (userResponse.permissions || [])
+                            .map((p) => toPermission(p.name))
+                            .filter((permission): permission is Permission => permission !== null),
                     };
 
                     set({
@@ -108,8 +125,8 @@ export const useAuthStore = create<AuthState>()(
                         loading: false,
                         error: null,
                     });
-                } catch (error: any) {
-                    const errorMessage = error.message || 'Login failed';
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : 'Login failed';
                     set({
                         loading: false,
                         error: errorMessage,
@@ -154,7 +171,9 @@ export const useAuthStore = create<AuthState>()(
                         name: userResponse.full_name || userResponse.username || userResponse.email,
                         email: userResponse.email,
                         role: userRole,
-                        permissions: (userResponse.permissions || []).map((p) => p.name as any),
+                        permissions: (userResponse.permissions || [])
+                            .map((p) => toPermission(p.name))
+                            .filter((permission): permission is Permission => permission !== null),
                     };
 
                     set({
@@ -163,7 +182,7 @@ export const useAuthStore = create<AuthState>()(
                         token,
                         loading: false,
                     });
-                } catch (error) {
+                } catch {
                     // Try refresh flow before forcing logout.
                     try {
                         const refreshed = await apiRefreshToken();
@@ -175,7 +194,9 @@ export const useAuthStore = create<AuthState>()(
                             name: userResponse.full_name || userResponse.username || userResponse.email,
                             email: userResponse.email,
                             role: userRole,
-                            permissions: (userResponse.permissions || []).map((p) => p.name as any),
+                            permissions: (userResponse.permissions || [])
+                                .map((p) => toPermission(p.name))
+                                .filter((permission): permission is Permission => permission !== null),
                         };
 
                         set({

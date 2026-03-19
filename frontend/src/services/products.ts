@@ -50,7 +50,7 @@ export interface ProductCreateInput {
   is_active?: boolean;
 }
 
-export interface ProductUpdateInput extends Partial<ProductCreateInput> {}
+export type ProductUpdateInput = Partial<ProductCreateInput>;
 
 /**
  * Product API service methods

@@ -41,8 +41,11 @@ export function ForgotPasswordPage() {
         try {
             const response = await requestPasswordReset(email.trim());
             setSuccessMessage(response.message || GENERIC_SUCCESS_MESSAGE);
-        } catch (err: any) {
-            const message = err?.message || 'Unable to process your request right now.';
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : 'Unable to process your request right now.';
             setError(message.replace(/^\[\d+\]\s*/, ''));
         } finally {
             setLoading(false);

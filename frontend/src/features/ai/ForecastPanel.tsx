@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -21,25 +21,25 @@ export function ForecastPanel({ products }: ForecastPanelProps) {
         }
     }, [products, selectedProductId]);
 
-    const loadForecast = async () => {
+    const loadForecast = useCallback(async () => {
         if (!selectedProductId) return;
         try {
             setIsLoading(true);
             setError(null);
             const response = await getMovingAverageForecast(Number(selectedProductId), 7, 14);
             setForecastData(response);
-        } catch (err: any) {
-            setError(err?.message || 'Failed to load forecast');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to load forecast');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedProductId]);
 
     useEffect(() => {
         if (selectedProductId) {
-            loadForecast();
+            void loadForecast();
         }
-    }, [selectedProductId]);
+    }, [selectedProductId, loadForecast]);
 
     return (
         <Card>

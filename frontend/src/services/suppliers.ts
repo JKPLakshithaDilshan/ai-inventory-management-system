@@ -47,7 +47,7 @@ export interface SupplierCreateInput {
     is_active?: boolean;
 }
 
-export interface SupplierUpdateInput extends Partial<SupplierCreateInput> {}
+export type SupplierUpdateInput = Partial<SupplierCreateInput>;
 
 
 /**

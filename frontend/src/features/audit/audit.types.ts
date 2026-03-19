@@ -20,8 +20,8 @@ export interface AuditLog {
     ip_address: string | null;
     user_agent: string | null;
     description: string | null;
-    old_values: Record<string, any> | null;
-    new_values: Record<string, any> | null;
+    old_values: Record<string, unknown> | null;
+    new_values: Record<string, unknown> | null;
     created_at: string;
     user?: AuditLogUser;
 }
