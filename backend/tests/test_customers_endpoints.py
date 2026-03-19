@@ -19,7 +19,11 @@ class _DummyUser:
 
 def _test_app() -> FastAPI:
     app = FastAPI()
-    app.include_router(customers.router, prefix="/api/v1/customers", tags=["Customers"])
+    app.include_router(
+        customers.router,
+        prefix="/api/v1/customers",
+        tags=["Customers"],
+    )
 
     async def override_get_current_user():
         return _DummyUser()
@@ -33,7 +37,10 @@ def _test_app() -> FastAPI:
 
 
 def test_list_customers_pagination_contract(monkeypatch):
-    async def mock_get_multi(self, skip=0, limit=100, search=None, is_active=None, customer_type=None):
+    async def mock_get_multi(
+        self, skip=0, limit=100, search=None, is_active=None,
+        customer_type=None,
+    ):
         assert skip == 0
         assert limit == 10
         assert search == "cus"
@@ -63,7 +70,11 @@ def test_list_customers_pagination_contract(monkeypatch):
     app = _test_app()
     client = TestClient(app)
 
-    response = client.get("/api/v1/customers?skip=0&limit=10&search=cus&is_active=true&customer_type=business")
+    url = (
+        "/api/v1/customers?skip=0&limit=10&search=cus"
+        "&is_active=true&customer_type=business"
+    )
+    response = client.get(url)
     assert response.status_code == 200
     payload = response.json()
     assert payload["total"] == 1
@@ -74,7 +85,9 @@ def test_create_customer_duplicate_code(monkeypatch):
     async def mock_has_code_conflict(self, customer_code, exclude_id=None):
         return True
 
-    monkeypatch.setattr(CustomerService, "has_code_conflict", mock_has_code_conflict)
+    monkeypatch.setattr(
+        CustomerService, "has_code_conflict", mock_has_code_conflict
+    )
 
     app = _test_app()
     client = TestClient(app)
@@ -90,7 +103,9 @@ def test_create_customer_duplicate_code(monkeypatch):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Customer with this code already exists"
+    detail = response.json()["detail"]
+    expected = "Customer with this code already exists"
+    assert detail == expected
 
 
 def test_create_customer_success(monkeypatch):
@@ -118,7 +133,9 @@ def test_create_customer_success(monkeypatch):
     async def mock_create_log(self, **kwargs):
         return None
 
-    monkeypatch.setattr(CustomerService, "has_code_conflict", mock_has_code_conflict)
+    monkeypatch.setattr(
+        CustomerService, "has_code_conflict", mock_has_code_conflict
+    )
     monkeypatch.setattr(CustomerService, "create", mock_create)
     monkeypatch.setattr(AuditService, "create_log", mock_create_log)
 
@@ -148,7 +165,9 @@ def test_update_customer_not_found(monkeypatch):
     app = _test_app()
     client = TestClient(app)
 
-    response = client.patch("/api/v1/customers/999", json={"full_name": "Updated"})
+    response = client.patch(
+        "/api/v1/customers/999", json={"full_name": "Updated"}
+    )
     assert response.status_code == 404
 
 
