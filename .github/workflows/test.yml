@@ -24,6 +24,7 @@ jobs:
       POSTGRES_SERVER: localhost
       POSTGRES_PORT: "5432"
       FIRST_SUPERUSER_PASSWORD: ci-admin-password
+      PYTHONPATH: ${{ github.workspace }}/backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
