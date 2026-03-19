@@ -64,7 +64,7 @@ export function SupplierForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<SupplierFormValues>({
-    resolver: zodResolver(supplierSchema) as any,
+    resolver: zodResolver(supplierSchema),
     defaultValues: {
       name: defaultValues?.name ?? '',
       code: defaultValues?.code ?? '',
@@ -153,7 +153,7 @@ export function SupplierForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit as any)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {submitError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {submitError}
@@ -162,7 +162,7 @@ export function SupplierForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -176,7 +176,7 @@ export function SupplierForm({
               />
 
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="code"
                 render={({ field }) => (
                   <FormItem>
@@ -192,7 +192,7 @@ export function SupplierForm({
 
             <div className="grid grid-cols-3 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="contact_person"
                 render={({ field }) => (
                   <FormItem>
@@ -205,7 +205,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
@@ -218,7 +218,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
@@ -234,7 +234,7 @@ export function SupplierForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="mobile"
                 render={({ field }) => (
                   <FormItem>
@@ -247,7 +247,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="tax_id"
                 render={({ field }) => (
                   <FormItem>
@@ -263,7 +263,7 @@ export function SupplierForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="address_line1"
                 render={({ field }) => (
                   <FormItem>
@@ -276,7 +276,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="address_line2"
                 render={({ field }) => (
                   <FormItem>
@@ -292,7 +292,7 @@ export function SupplierForm({
 
             <div className="grid grid-cols-4 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="city"
                 render={({ field }) => (
                   <FormItem>
@@ -305,7 +305,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="state"
                 render={({ field }) => (
                   <FormItem>
@@ -318,7 +318,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="country"
                 render={({ field }) => (
                   <FormItem>
@@ -331,7 +331,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="postal_code"
                 render={({ field }) => (
                   <FormItem>
@@ -347,7 +347,7 @@ export function SupplierForm({
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="payment_terms"
                 render={({ field }) => (
                   <FormItem>
@@ -360,7 +360,7 @@ export function SupplierForm({
                 )}
               />
               <FormField
-                control={form.control as any}
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
@@ -375,7 +375,7 @@ export function SupplierForm({
             </div>
 
             <FormField
-              control={form.control as any}
+              control={form.control}
               name="is_active"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

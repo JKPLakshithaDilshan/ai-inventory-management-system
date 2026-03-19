@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,11 +28,7 @@ export function StepSupplier() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadSuppliers();
-    }, []);
-
-    const loadSuppliers = async () => {
+    const loadSuppliers = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -63,7 +59,11 @@ export function StepSupplier() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [draft.warehouseId, updateDraftMeta]);
+
+    useEffect(() => {
+        void loadSuppliers();
+    }, [loadSuppliers]);
 
     const form = useForm<StepSupplierValues>({
         resolver: zodResolver(stepSupplierSchema),
@@ -89,7 +89,7 @@ export function StepSupplier() {
             <div className="space-y-4">
                 <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
                     <p className="font-medium">{error}</p>
-                    <Button variant="outline" size="sm" onClick={loadSuppliers} className="mt-2">
+                    <Button variant="outline" size="sm" onClick={() => void loadSuppliers()} className="mt-2">
                         Retry
                     </Button>
                 </div>

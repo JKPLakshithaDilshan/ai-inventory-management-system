@@ -20,7 +20,11 @@ class _DummyUser:
 
 def _test_app() -> FastAPI:
     app = FastAPI()
-    app.include_router(stock_adjustments.router, prefix="/api/v1/stock-adjustments", tags=["Stock Adjustments"])
+    app.include_router(
+        stock_adjustments.router,
+        prefix="/api/v1/stock-adjustments",
+        tags=["Stock Adjustments"],
+    )
 
     async def override_get_current_user():
         return _DummyUser()
@@ -34,7 +38,16 @@ def _test_app() -> FastAPI:
 
 
 def test_list_stock_adjustments_contract(monkeypatch):
-    async def mock_get_multi(self, skip=0, limit=100, product_id=None, warehouse_id=None, adjustment_type=None, date_from=None, date_to=None):
+    async def mock_get_multi(
+        self,
+        skip=0,
+        limit=100,
+        product_id=None,
+        warehouse_id=None,
+        adjustment_type=None,
+        date_from=None,
+        date_to=None,
+    ):
         assert skip == 0
         assert limit == 10
         assert product_id == 5
@@ -60,7 +73,10 @@ def test_list_stock_adjustments_contract(monkeypatch):
     app = _test_app()
     client = TestClient(app)
 
-    response = client.get("/api/v1/stock-adjustments?skip=0&limit=10&product_id=5&warehouse_id=2&adjustment_type=increase")
+    response = client.get(
+        "/api/v1/stock-adjustments?skip=0&limit=10"
+        "&product_id=5&warehouse_id=2&adjustment_type=increase"
+    )
     assert response.status_code == 200
 
     payload = response.json()
@@ -75,12 +91,18 @@ def test_get_current_stock(monkeypatch):
         assert warehouse_id == 9
         return 44
 
-    monkeypatch.setattr(StockAdjustmentService, "get_current_stock", mock_get_current_stock)
+    monkeypatch.setattr(
+        StockAdjustmentService,
+        "get_current_stock",
+        mock_get_current_stock,
+    )
 
     app = _test_app()
     client = TestClient(app)
 
-    response = client.get("/api/v1/stock-adjustments/current-stock?product_id=3&warehouse_id=9")
+    response = client.get(
+        "/api/v1/stock-adjustments/current-stock?product_id=3&warehouse_id=9"
+    )
     assert response.status_code == 200
     assert response.json()["quantity"] == 44
 
@@ -89,7 +111,11 @@ def test_create_stock_adjustment_duplicate_reference(monkeypatch):
     async def mock_has_reference_conflict(self, adjustment_reference):
         return True
 
-    monkeypatch.setattr(StockAdjustmentService, "has_reference_conflict", mock_has_reference_conflict)
+    monkeypatch.setattr(
+        StockAdjustmentService,
+        "has_reference_conflict",
+        mock_has_reference_conflict,
+    )
 
     app = _test_app()
     client = TestClient(app)
@@ -131,8 +157,16 @@ def test_create_stock_adjustment_success(monkeypatch):
     async def mock_create_log(self, **kwargs):
         return None
 
-    monkeypatch.setattr(StockAdjustmentService, "has_reference_conflict", mock_has_reference_conflict)
-    monkeypatch.setattr(StockAdjustmentService, "create_adjustment", mock_create_adjustment)
+    monkeypatch.setattr(
+        StockAdjustmentService,
+        "has_reference_conflict",
+        mock_has_reference_conflict,
+    )
+    monkeypatch.setattr(
+        StockAdjustmentService,
+        "create_adjustment",
+        mock_create_adjustment,
+    )
     monkeypatch.setattr(AuditService, "create_log", mock_create_log)
 
     app = _test_app()

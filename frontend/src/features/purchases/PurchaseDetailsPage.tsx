@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -24,15 +24,7 @@ export function PurchaseDetailsPage() {
     const [isReceiving, setIsReceiving] = useState(false);
     const [isMarkingPending, setIsMarkingPending] = useState(false);
 
-    useEffect(() => {
-        if (!user) {
-            navigate('/auth/login');
-            return;
-        }
-        loadPurchase();
-    }, [id, user, navigate]);
-
-    const loadPurchase = async () => {
+    const loadPurchase = useCallback(async () => {
         if (!id) return;
         try {
             setLoading(true);
@@ -50,7 +42,15 @@ export function PurchaseDetailsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, toast]);
+
+    useEffect(() => {
+        if (!user) {
+            navigate('/auth/login');
+            return;
+        }
+        void loadPurchase();
+    }, [user, navigate, loadPurchase]);
 
     const handleReceive = async () => {
         if (!purchase || purchase.status === 'received') {
@@ -80,7 +80,7 @@ export function PurchaseDetailsPage() {
             });
 
             setIsReceiveDialogOpen(false);
-            loadPurchase();
+            void loadPurchase();
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Failed to receive purchase';
             toast({
@@ -148,7 +148,7 @@ export function PurchaseDetailsPage() {
                 </Button>
                 <Card className="border-destructive/50 bg-destructive/10 p-6 text-destructive">
                     <p className="font-medium">{error || 'Purchase not found'}</p>
-                    <Button variant="outline" size="sm" onClick={loadPurchase} className="mt-4">
+                    <Button variant="outline" size="sm" onClick={() => void loadPurchase()} className="mt-4">
                         Retry
                     </Button>
                 </Card>
@@ -158,6 +158,13 @@ export function PurchaseDetailsPage() {
 
     const canMarkPending = purchase.status === 'draft';
     const canReceive = purchase.status === 'pending' || purchase.status === 'approved';
+    const statusBadgeVariant: Record<Purchase['status'], NonNullable<BadgeProps['variant']>> = {
+        draft: 'secondary',
+        pending: 'outline',
+        approved: 'outline',
+        received: 'default',
+        cancelled: 'destructive',
+    };
 
     return (
         <div className="flex flex-col gap-6">
@@ -177,17 +184,7 @@ export function PurchaseDetailsPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Badge
-                        variant={
-                            {
-                                draft: 'secondary',
-                                pending: 'outline',
-                                approved: 'outline',
-                                received: 'default',
-                                cancelled: 'destructive',
-                            }[purchase.status] as any
-                        }
-                    >
+                    <Badge variant={statusBadgeVariant[purchase.status]}>
                         {purchase.status.toUpperCase()}
                     </Badge>
                     {canMarkPending && (

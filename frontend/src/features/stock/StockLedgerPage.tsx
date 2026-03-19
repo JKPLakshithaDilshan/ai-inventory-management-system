@@ -78,6 +78,7 @@ export function StockLedgerPage() {
         setError(null);
 
         const filters: StockLedgerFilter = {
+          page,
           page_size: PAGE_SIZE,
           product_id: selectedProduct,
           warehouse_id: selectedWarehouse,

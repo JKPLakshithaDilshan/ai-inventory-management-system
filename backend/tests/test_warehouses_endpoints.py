@@ -19,7 +19,11 @@ class _DummyUser:
 
 def _test_app() -> FastAPI:
     app = FastAPI()
-    app.include_router(warehouses.router, prefix="/api/v1/warehouses", tags=["Warehouses"])
+    app.include_router(
+        warehouses.router,
+        prefix="/api/v1/warehouses",
+        tags=["Warehouses"],
+    )
 
     async def override_get_current_user():
         return _DummyUser()
@@ -33,7 +37,13 @@ def _test_app() -> FastAPI:
 
 
 def test_list_warehouses_pagination_contract(monkeypatch):
-    async def mock_get_multi(self, skip=0, limit=100, search=None, is_active=None):
+    async def mock_get_multi(
+        self,
+        skip=0,
+        limit=100,
+        search=None,
+        is_active=None,
+    ):
         assert skip == 0
         assert limit == 10
         assert search == "main"
@@ -63,7 +73,9 @@ def test_list_warehouses_pagination_contract(monkeypatch):
     app = _test_app()
     client = TestClient(app)
 
-    response = client.get("/api/v1/warehouses?skip=0&limit=10&search=main&is_active=true")
+    response = client.get(
+        "/api/v1/warehouses?skip=0&limit=10&search=main&is_active=true"
+    )
     assert response.status_code == 200
 
     payload = response.json()
@@ -79,7 +91,11 @@ def test_create_warehouse_duplicate_code(monkeypatch):
         assert code == "WH-MAIN"
         return True
 
-    monkeypatch.setattr(WarehouseService, "has_code_conflict", mock_has_code_conflict)
+    monkeypatch.setattr(
+        WarehouseService,
+        "has_code_conflict",
+        mock_has_code_conflict,
+    )
 
     app = _test_app()
     client = TestClient(app)
@@ -90,7 +106,10 @@ def test_create_warehouse_duplicate_code(monkeypatch):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Warehouse with this code already exists"
+    assert (
+        response.json()["detail"]
+        == "Warehouse with this code already exists"
+    )
 
 
 def test_create_warehouse_success(monkeypatch):
@@ -118,7 +137,11 @@ def test_create_warehouse_success(monkeypatch):
     async def mock_create_log(self, **kwargs):
         return None
 
-    monkeypatch.setattr(WarehouseService, "has_code_conflict", mock_has_code_conflict)
+    monkeypatch.setattr(
+        WarehouseService,
+        "has_code_conflict",
+        mock_has_code_conflict,
+    )
     monkeypatch.setattr(WarehouseService, "create", mock_create)
     monkeypatch.setattr(AuditService, "create_log", mock_create_log)
 
@@ -127,7 +150,11 @@ def test_create_warehouse_success(monkeypatch):
 
     response = client.post(
         "/api/v1/warehouses",
-        json={"name": "Branch Warehouse", "code": "WH-BRANCH", "is_active": True},
+        json={
+            "name": "Branch Warehouse",
+            "code": "WH-BRANCH",
+            "is_active": True,
+        },
     )
 
     assert response.status_code == 201
@@ -180,7 +207,11 @@ def test_delete_warehouse_success(monkeypatch):
         return None
 
     monkeypatch.setattr(WarehouseService, "get_by_id", mock_get_by_id)
-    monkeypatch.setattr(WarehouseService, "has_dependencies", mock_has_dependencies)
+    monkeypatch.setattr(
+        WarehouseService,
+        "has_dependencies",
+        mock_has_dependencies,
+    )
     monkeypatch.setattr(WarehouseService, "delete", mock_delete)
     monkeypatch.setattr(AuditService, "create_log", mock_create_log)
 

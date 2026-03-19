@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ export function SaleDetailsPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
 
-  const loadSale = async () => {
+  const loadSale = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -34,11 +34,11 @@ export function SaleDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    loadSale();
-  }, [id]);
+    void loadSale();
+  }, [loadSale]);
 
   const handleCompleteSale = async () => {
     if (!sale) return;
@@ -84,7 +84,7 @@ export function SaleDetailsPage() {
         </Button>
         <Card className="p-6 border-destructive/30 bg-destructive/5">
           <p className="font-medium text-destructive">{error ?? 'Sale not found'}</p>
-          <Button variant="outline" className="mt-3" onClick={loadSale}>
+          <Button variant="outline" className="mt-3" onClick={() => void loadSale()}>
             Retry
           </Button>
         </Card>

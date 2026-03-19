@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { createUser, getRoles, updateUser, type Role, type User, type UserCreateInput } from '@/services/users';
+import { createUser, getRoles, updateUser, type Role, type User, type UserCreateInput, type UserUpdateInput } from '@/services/users';
 
 interface UserFormProps {
     user?: User | null;
@@ -83,7 +83,7 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
 
             if (user) {
                 // Update user
-                const updateData: any = {
+                const updateData: Partial<UserUpdateInput> = {
                     email: formData.email,
                     username: formData.username,
                     full_name: formData.full_name,
@@ -126,10 +126,10 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 });
             }
             onSuccess?.();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: 'Error',
-                description: error?.message || 'Failed to save user',
+                description: error instanceof Error ? error.message : 'Failed to save user',
                 variant: 'destructive',
             });
         } finally {
