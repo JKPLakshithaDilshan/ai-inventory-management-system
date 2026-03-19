@@ -5,15 +5,25 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { Loader2 } from 'lucide-react';
 
 function App() {
-  const { bootstrap, loading } = useAuthStore();
+  const { bootstrap, loading, logout } = useAuthStore();
 
   useEffect(() => {
     // Verify token on app load
-    bootstrap().catch((error) => {
-      console.error('Bootstrap failed:', error);
+    bootstrap().catch(() => {
       // Silently fail - user will be on login page
     });
   }, [bootstrap]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [logout]);
 
   // Show loader while checking authentication
   if (loading) {

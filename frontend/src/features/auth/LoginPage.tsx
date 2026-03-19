@@ -47,7 +47,7 @@ export function LoginPage() {
             if (message.includes('[401]') || message.includes('Invalid') || message.includes('Incorrect')) {
                 setLocalError('Invalid username or password');
             } else if (message.includes('fetch') || message.includes('network') || message.includes('Failed to fetch')) {
-                setLocalError('Cannot connect to backend (http://localhost:8000). Is the server running?');
+                setLocalError('Cannot connect to backend API. Check server status and VITE_API_BASE_URL.');
             } else {
                 setLocalError(message.replace(/^\[\d+\]\s*/, '')); // Remove status code prefix
             }
@@ -141,16 +141,6 @@ export function LoginPage() {
                             )}
                         </Button>
                     </form>
-
-                    {/* Development Credentials */}
-                    <div className="mt-6 p-4 rounded-lg bg-muted/50 border border-border/50">
-                        <p className="text-xs text-muted-foreground text-center">
-                            <span className="font-semibold text-foreground">💡 Dev Credentials:</span>
-                            <br />
-                            <code className="text-xs bg-background px-1 py-0.5 rounded">admin</code> / 
-                            <code className="text-xs bg-background px-1 py-0.5 rounded ml-1">admin123</code>
-                        </p>
-                    </div>
 
                     {/* Features Info */}
                     <div className="mt-6 space-y-2">

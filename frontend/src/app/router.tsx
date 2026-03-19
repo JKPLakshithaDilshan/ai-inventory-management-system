@@ -7,8 +7,8 @@ import { RequirePermission } from '@/components/auth/RequirePermission';
 import { PERMISSIONS } from '@/lib/rbac';
 
 // Lazy loading Feature Pages for code-splitting
-const LoginPage = lazy(() => import('@/features/dummy-pages').then(m => ({ default: m.LoginPage })));
-const DashboardPage = lazy(() => import('@/features/dummy-pages').then(m => ({ default: m.DashboardPage })));
+const LoginPage = lazy(() => import('@/features/auth/LoginPage').then(m => ({ default: m.LoginPage })));
+const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ProductsPage = lazy(() => import('@/features/products/ProductsPage').then(m => ({ default: m.ProductsPage })));
 const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 const PurchasesListPage = lazy(() => import('@/features/purchases/PurchasesListPage').then(m => ({ default: m.PurchasesPage })));
@@ -17,6 +17,9 @@ const PurchaseWizard = lazy(() => import('@/features/purchases/PurchaseWizard').
 
 const SalesPage = lazy(() => import('@/features/sales/SalesPage').then(m => ({ default: m.SalesPage })));
 const CreateSalePage = lazy(() => import('@/features/sales/CreateSalePage').then(m => ({ default: m.CreateSalePage })));
+const SaleDetailsPage = lazy(() => import('@/features/sales/SaleDetailsPage').then(m => ({ default: m.SaleDetailsPage })));
+
+const StockLedgerPage = lazy(() => import('@/features/stock/StockLedgerPage').then(m => ({ default: m.StockLedgerPage })));
 
 const AlertsPage = lazy(() => import('@/features/alerts/AlertsPage').then(m => ({ default: m.AlertsPage })));
 const AIForecastPage = lazy(() => import('@/features/ai/AIForecastPage').then(m => ({ default: m.AIForecastPage })));
@@ -26,7 +29,6 @@ const UnauthorizedPage = lazy(() => import('@/features/auth/UnauthorizedPage').t
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 const UsersPage = lazy(() => import('@/features/users/UsersPage').then(m => ({ default: m.UsersPage })));
-const DebugAuthPage = lazy(() => import('@/features/debug/DebugAuthPage').then(m => ({ default: m.DebugAuthPage })));
 
 // Fallback skeleton loader while routes load
 const PageLoader = () => (
@@ -39,13 +41,11 @@ export function AppRouter() {
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>
-                <Route path="/debug-auth" element={<DebugAuthPage />} />
-
                 {/* Auth Routes */}
                 <Route element={<RequireGuest />}>
                     <Route element={<AuthLayout />}>
                         <Route path="/auth/login" element={<LoginPage />} />
-                        <Route path="/auth/forgot-password" element={<div className="p-4">Forgot Password Placeholder</div>} />
+                        <Route path="/auth/forgot-password" element={<Navigate to="/auth/login" replace />} />
                     </Route>
                 </Route>
 
@@ -65,7 +65,10 @@ export function AppRouter() {
                         <Route path="/sales">
                             <Route index element={<SalesPage />} />
                             <Route path="new" element={<CreateSalePage />} />
+                            <Route path=":id" element={<SaleDetailsPage />} />
                         </Route>
+
+                        <Route path="/stock-ledger" element={<StockLedgerPage />} />
 
                         <Route element={<RequirePermission permission={PERMISSIONS.ALERTS_VIEW} />}>
                             <Route path="/alerts" element={<AlertsPage />} />

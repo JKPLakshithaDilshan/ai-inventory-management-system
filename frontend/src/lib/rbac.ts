@@ -110,6 +110,9 @@ export interface User {
     name: string;
     email: string;
     role: Role;
+    role_id?: number;
+    role_name?: string;
+    permissions?: Permission[];
 }
 
 /**
@@ -117,6 +120,12 @@ export interface User {
  */
 export function hasPermission(user: User | null, permission: Permission): boolean {
     if (!user) return false;
+
+    // Prefer backend-derived permission list when available.
+    if (user.permissions && user.permissions.length > 0) {
+        return user.permissions.includes(permission);
+    }
+
     const permissions = ROLE_PERMISSIONS[user.role];
     return permissions.includes(permission);
 }
