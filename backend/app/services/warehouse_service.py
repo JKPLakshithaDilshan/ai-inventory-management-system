@@ -71,10 +71,18 @@ class WarehouseService(BaseService[Warehouse, WarehouseCreate, WarehouseUpdate])
     async def has_dependencies(self, warehouse_id: int) -> bool:
         """Check whether warehouse is referenced by inventory or transactions."""
         checks = [
-            select(func.count()).select_from(ProductLocation).where(ProductLocation.warehouse_id == warehouse_id),
-            select(func.count()).select_from(StockLedger).where(StockLedger.warehouse_id == warehouse_id),
-            select(func.count()).select_from(Purchase).where(Purchase.warehouse_id == warehouse_id),
-            select(func.count()).select_from(Sale).where(Sale.warehouse_id == warehouse_id),
+            select(func.count())
+            .select_from(ProductLocation)
+            .where(ProductLocation.warehouse_id == warehouse_id),
+            select(func.count())
+            .select_from(StockLedger)
+            .where(StockLedger.warehouse_id == warehouse_id),
+            select(func.count())
+            .select_from(Purchase)
+            .where(Purchase.warehouse_id == warehouse_id),
+            select(func.count())
+            .select_from(Sale)
+            .where(Sale.warehouse_id == warehouse_id),
         ]
 
         for check in checks:
