@@ -71,7 +71,7 @@ uploads/
 media/
 
 # AI Models
-models/
+# Keep ML artifacts out of git, but do not ignore app/models source code.
 *.pkl
 *.h5
 *.pt
