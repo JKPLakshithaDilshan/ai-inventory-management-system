@@ -278,7 +278,7 @@ Critical variable:
 
 ### Alerts and AI pages
 
-![Alerts and AI pages](sample-images/Alerts & AI Recorder.png)
+![Alerts and AI pages](sample-images/Alerts%20%26%20AI%20Recorder.png)
 
 ## If you would like to collaborate, discuss improvements, or project opportunities, feel free to reach out.
 
