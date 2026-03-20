@@ -260,12 +260,25 @@ Critical variable:
 
 ## Screenshots
 
-- Login page
-- Dashboard
-- Products table
-- Purchase workflow
-- Sales workflow
-- Alerts and AI pages
+### Dashboard
+
+![Dashboard](sample-images/Dashboard.png)
+
+### Products table
+
+![Products table](sample-images/Products.png)
+
+### Purchase workflow
+
+![Purchase workflow](sample-images/Purchases.png)
+
+### Sales workflow
+
+![Sales workflow](sample-images/Sales.png)
+
+### Alerts and AI pages
+
+![Alerts and AI pages](sample-images/Alerts & AI Recorder.png)
 
 ## If you would like to collaborate, discuss improvements, or project opportunities, feel free to reach out.
 
